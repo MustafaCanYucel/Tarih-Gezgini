@@ -1,0 +1,24 @@
+# Cordova
+tarih-gezgini-mobile/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build files
+build/
+dist/
+
+# Documentation (sadece gerekli olanları tutacağız)
+MOBIL_APK_REHBERI.md
+APK_BASIT_YONTEM.md
+IOS_PAKET_REHBERI.md
+XCODE_SIGNING_COZUM.md
+SES_ENTEGRASYON_DOKUMANI.md
+SEVİYE_MÜZİKLERİ_GÜNCELLEMESİ.md

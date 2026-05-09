@@ -1,0 +1,2940 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Tarih Gezgini – Miras Koşusu</title>
+  <style>
+    /* ===== GLOBAL STİLLER ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --gold: #FFD700;
+      --orange: #FF6B35;
+      --teal: #00C9B1;
+      --purple: #7C3AED;
+      --pink: #FF4D94;
+      --dark: #0D0D1A;
+      --font-display: 'Cinzel', serif;
+      --font-body: 'Nunito', sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;900&display=swap');
+
+    body {
+      background: var(--dark);
+      font-family: var(--font-body);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+      user-select: none;
+    }
+
+    /* ===== THREE.JS CANVAS ===== */
+    #gameCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: background-image 0.5s ease-in-out;
+    }
+
+    /* Kapadokya seviyesi arka planı - pastel ve sisli görünüm */
+    #gameCanvas.level-kapadokya {
+      background-image: url('kapadokya_background_800x600 kopyası.jpg');
+      filter: brightness(1.1) contrast(0.85) saturate(0.7) blur(0.5px);
+    }
+
+    /* Mezopotamya seviyesi arka planı - sarı sıcak çöl tonu ve hafif sis */
+    #gameCanvas.level-mezopotamya {
+      background-image: url('mezopotamya_background_800x600.jpg');
+      filter: brightness(1.05) contrast(0.9) saturate(0.85) sepia(0.15) blur(0.4px);
+    }
+
+    /* Anadolu Uygarlıkları seviyesi arka planı */
+    #gameCanvas.level-anadolu {
+      background-image: url('antik_uygarlik_arka_plan_800x600.jpg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      filter: brightness(1.05) contrast(0.95) saturate(0.9);
+    }
+
+    /* Eskişehir Odunpazarı seviyesi arka planı */
+    #gameCanvas.level-odunpazari {
+      background-image: url('eskisehir_odunpazari_800x600.jpg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      filter: brightness(1.03) contrast(0.97) saturate(0.95);
+    }
+
+    /* ===== EKRANLAR (OVERLAY) ===== */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s, transform 0.5s;
+    }
+
+    .screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.95);
+    }
+
+    /* ===== BAŞLANGIÇ / KARAKTER SEÇİM EKRANI ===== */
+    #startScreen {
+      background: linear-gradient(135deg, #0D0D1A 0%, #1a0533 50%, #0D1A1A 100%);
+    }
+
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 32px;
+      animation: floatY 3s ease-in-out infinite;
+    }
+
+    @keyframes floatY {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-12px);
+      }
+    }
+
+    .logo-title {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 6vw, 56px);
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--gold), var(--orange), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 2px;
+      line-height: 1.1;
+      text-shadow: none;
+      filter: drop-shadow(0 0 24px rgba(255, 215, 0, 0.4));
+    }
+
+    .logo-sub {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: clamp(12px, 2.5vw, 18px);
+      color: var(--teal);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .char-select-label {
+      font-family: var(--font-display);
+      font-size: clamp(14px, 3vw, 22px);
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 24px;
+      letter-spacing: 2px;
+    }
+
+    .char-cards {
+      display: flex;
+      gap: 28px;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .char-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(255, 215, 0, 0.2);
+      border-radius: 24px;
+      padding: 24px 32px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      min-width: 130px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .char-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .char-card:hover::before,
+    .char-card.selected::before {
+      opacity: 1;
+    }
+
+    .char-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-8px) scale(1.05);
+      box-shadow: 0 16px 40px rgba(255, 215, 0, 0.3);
+    }
+
+    .char-card.selected {
+      border-color: var(--gold);
+      box-shadow: 0 0 32px rgba(255, 215, 0, 0.5);
+      transform: translateY(-8px) scale(1.05);
+    }
+
+    .char-icon {
+      font-size: 56px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .char-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, var(--orange), var(--pink));
+      border: none;
+      border-radius: 50px;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: clamp(16px, 3vw, 22px);
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 16px 56px;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(255, 77, 148, 0.4);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-transform: uppercase;
+    }
+
+    .btn-start:hover {
+      transform: scale(1.08);
+      box-shadow: 0 12px 48px rgba(255, 77, 148, 0.6);
+    }
+
+    /* ===== HUD (Oyun İçi Arayüz) ===== */
+    #hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .hud-box {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 16px;
+      padding: 10px 20px;
+      min-width: 110px;
+    }
+
+    .hud-label {
+      font-size: 10px;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    .hud-value {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 4vw, 28px);
+      color: var(--gold);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .hud-center {
+      text-align: center;
+    }
+
+    .level-badge {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-family: var(--font-display);
+      font-size: clamp(11px, 2vw, 14px);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+
+    .lives {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .heart {
+      font-size: 18px;
+      transition: all 0.3s;
+    }
+
+    .heart.dead {
+      opacity: 0.2;
+      filter: grayscale(1);
+    }
+
+    /* ===== SORU / CEVAP UI ===== */
+    #questionPanel {
+      position: fixed;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(90vw, 600px);
+      background: rgba(13, 13, 26, 0.92);
+      backdrop-filter: blur(16px);
+      border: 2px solid var(--gold);
+      border-radius: 20px;
+      padding: 20px 28px;
+      z-index: 60;
+      text-align: center;
+      box-shadow: 0 0 48px rgba(255, 215, 0, 0.25);
+      display: none;
+      animation: slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    .q-text {
+      font-family: var(--font-display);
+      font-size: clamp(13px, 2.5vw, 18px);
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .q-hint {
+      font-size: clamp(11px, 2vw, 14px);
+      color: var(--teal);
+      font-weight: 700;
+    }
+
+    /* ===== BİLGİ NOTU POP-UP ===== */
+    #infoPopup {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      width: min(85vw, 500px);
+      background: linear-gradient(135deg, #1a0533, #0D1A1A);
+      border: 2px solid var(--orange);
+      border-radius: 20px;
+      padding: 18px 24px;
+      z-index: 70;
+      text-align: center;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+    }
+
+    #infoPopup.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .info-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      color: var(--orange);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .info-text {
+      font-size: clamp(12px, 2.5vw, 15px);
+      color: #ddd;
+      line-height: 1.5;
+    }
+
+    /* ===== KONFETİ CANVAS ===== */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 80;
+    }
+
+    /* ===== GAME OVER / SERTIFIKA EKRANI ===== */
+    #endScreen {
+      background: linear-gradient(135deg, #0D0D1A 0%, #1a0533 50%, #0D1A1A 100%);
+      z-index: 90;
+    }
+
+    .cert-wrap {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(124, 58, 237, 0.08));
+      border: 3px solid var(--gold);
+      border-radius: 24px;
+      padding: 36px 48px;
+      text-align: center;
+      max-width: min(90vw, 520px);
+      box-shadow: 0 0 64px rgba(255, 215, 0, 0.2), inset 0 0 48px rgba(255, 215, 0, 0.03);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cert-wrap::before {
+      content: '⭐';
+      position: absolute;
+      font-size: 120px;
+      opacity: 0.04;
+      top: -20px;
+      right: -20px;
+    }
+
+    .cert-title {
+      font-family: var(--font-display);
+      font-size: clamp(10px, 2vw, 13px);
+      color: var(--teal);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .cert-name {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 5vw, 36px);
+      color: var(--gold);
+      font-weight: 900;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.5));
+    }
+
+    .cert-desc {
+      font-size: clamp(12px, 2vw, 15px);
+      color: #aaa;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .cert-score {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 8vw, 64px);
+      color: var(--orange);
+      font-weight: 900;
+      line-height: 1;
+      filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.5));
+    }
+
+    .cert-score-label {
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 24px;
+    }
+
+    .cert-rank {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border-radius: 50px;
+      padding: 8px 24px;
+      font-family: var(--font-display);
+      font-size: clamp(13px, 2.5vw, 17px);
+      color: #fff;
+      font-weight: 700;
+      margin-bottom: 28px;
+    }
+
+    .btn-restart {
+      background: linear-gradient(135deg, var(--teal), var(--purple));
+      border: none;
+      border-radius: 50px;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: clamp(14px, 2.5vw, 18px);
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 14px 48px;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(0, 201, 177, 0.3);
+      transition: all 0.3s;
+      text-transform: uppercase;
+    }
+
+    .btn-restart:hover {
+      transform: scale(1.06);
+    }
+
+    /* ===== MOBİL KONTROL GÖSTERGESI ===== */
+    #mobileHint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 20px;
+      padding: 8px 20px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 12px;
+      z-index: 50;
+      pointer-events: none;
+      display: none;
+    }
+
+    /* ===== LANE INDICATOR ===== */
+    #laneIndicator {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .lane-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.2s;
+    }
+
+    .lane-dot.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px var(--gold);
+    }
+
+    /* ===== HIZLANMA BILDIRIMI ===== */
+    #speedAlert {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-display);
+      font-size: clamp(24px, 6vw, 48px);
+      color: var(--gold);
+      font-weight: 900;
+      text-align: center;
+      pointer-events: none;
+      z-index: 75;
+      opacity: 0;
+      filter: drop-shadow(0 0 24px var(--gold));
+      transition: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- THREE.JS CANVAS -->
+  <canvas id="gameCanvas"></canvas>
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-box">
+      <div class="hud-label">Puan</div>
+      <div class="hud-value" id="scoreDisplay">0</div>
+    </div>
+    <div class="hud-box hud-center">
+      <div class="hud-label">Seviye</div>
+      <div class="hud-value" id="levelDisplay">1</div>
+      <div class="level-badge" id="levelName">Anadolu</div>
+    </div>
+    <div class="hud-box" style="text-align:right">
+      <div class="hud-label">Canlar</div>
+      <div class="lives" id="livesDisplay">
+        <span class="heart" id="h1">❤️</span>
+        <span class="heart" id="h2">❤️</span>
+        <span class="heart" id="h3">❤️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SORU PANELİ -->
+  <div id="questionPanel">
+    <div class="q-text" id="qText"></div>
+    <div class="q-hint">← Sol şerit | Orta şerit | Sağ şerit →</div>
+  </div>
+
+  <!-- BİLGİ NOTU -->
+  <div id="infoPopup">
+    <div class="info-title">📚 Bilgi Notu</div>
+    <div class="info-text" id="infoText"></div>
+  </div>
+
+  <!-- LANE INDICATOR -->
+  <div id="laneIndicator">
+    <div class="lane-dot" id="dot0"></div>
+    <div class="lane-dot active" id="dot1"></div>
+    <div class="lane-dot" id="dot2"></div>
+  </div>
+
+  <!-- MOBİL İPUCU -->
+  <div id="mobileHint">← Sola kaydır | Sağa kaydır →</div>
+
+  <!-- HIZ UYARISI -->
+  <div id="speedAlert">⚡ HIZLANDIN!</div>
+
+  <!-- BAŞLANGIÇ EKRANI -->
+  <div class="screen" id="startScreen">
+    <div class="logo-wrap">
+      <div class="logo-title">Tarih Gezgini</div>
+      <div class="logo-sub">Miras Koşusu</div>
+    </div>
+
+    <div class="char-select-label">Gezginini Seç</div>
+    <div class="char-cards">
+      <div class="char-card selected" data-char="girl" onclick="selectChar(this)">
+        <span class="char-icon">👧</span>
+        <div class="char-name">Elif</div>
+      </div>
+      <div class="char-card" data-char="boy" onclick="selectChar(this)">
+        <span class="char-icon">👦</span>
+        <div class="char-name">Can</div>
+      </div>
+    </div>
+
+    <button class="btn-start" onclick="startGame()">Koşuya Başla!</button>
+  </div>
+
+  <!-- OYUN BİTİŞ EKRANI -->
+  <div class="screen hidden" id="endScreen">
+    <div class="cert-wrap">
+      <div class="cert-title">🏛️ Tarih Gezgini Sertifikası 🏛️</div>
+      <div class="cert-name" id="certCharName">Elif</div>
+      <div class="cert-desc">Tarihin derinliklerinde yaptığın bu olağanüstü yolculuk için tebrikler! Anadolu'dan
+        Mezopotamya'ya, antik uygarlıklardan günümüz mirasına uzanan bu koşuda gösterdiğin bilgi ve cesaret unutulmaz.
+      </div>
+      <div class="cert-score" id="certScore">0</div>
+      <div class="cert-score-label">Toplam Puan</div>
+      <div class="cert-rank" id="certRank">Tarih Meraklısı</div>
+      <button class="btn-restart" onclick="restartGame()">Tekrar Koş!</button>
+    </div>
+  </div>
+
+  <!-- THREE.JS + OYUN KODU -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // ============================================================
+    //  BÖLÜM 1: OYUN VERİLERİ – SORULAR VE SEVIYELER
+    // ============================================================
+
+    const LEVELS = [
+      {
+        id: 1,
+        name: "Kapadokya",
+        bgColors: { sky: 0xFFDAB9, fog: 0xFFDAB9, ground: 0xF4A460 },
+        questions: [
+          {
+            q: "Dünyanın bilinen en eski tapınak kompleksi hangisidir?",
+            answers: ["Çatalhöyük", "Göbeklitepe", "Çayönü"],
+            correct: 1,
+            info: "Göbeklitepe, MÖ 12.000 yılına tarihlenen, Şanlıurfa'da bulunan dünyanın en eski bilinen tapınak kompleksidir. UNESCO Dünya Mirası Listesi'ndedir."
+          },
+          {
+            q: "Çatalhöyük hangi şehrimizde bulunmaktadır?",
+            answers: ["Ankara", "Konya", "İzmir"],
+            correct: 1,
+            info: "Çatalhöyük, Konya'nın Çumra ilçesinde bulunur. MÖ 7500-5700 yıllarına ait, dünyanın en eski yerleşim yerlerinden biridir."
+          },
+          {
+            q: "Çayönü yerleşimi hangi özelliğiyle öne çıkar?",
+            answers: ["En eski liman", "İlk ev kedisi", "İlk tahıl tarımı"],
+            correct: 2,
+            info: "Diyarbakır'daki Çayönü, MÖ 7200 yıllarında ilk tarım denemelerinin yapıldığı yerlerden biridir. Buğday ve mercimek yetiştiriciliğinin izleri bulunmuştur."
+          },
+          {
+            q: "Höyük nedir?",
+            answers: ["Bir tür kale", "Üst üste yerleşim tepesi", "Antik tapınak"],
+            correct: 1,
+            info: "Höyük (tell), birbirine bağlı yerleşim katmanlarının üst üste birikmesiyle oluşan yapay tepelerdir. Anadolu arkeolojisinin en önemli kavramlarından biridir."
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: "Mezopotamya",
+        bgColors: { sky: 0xF4E4A0, fog: 0xE8C47A, ground: 0xD2B48C },
+        questions: [
+          {
+            q: "Çivi yazısını kim geliştirmiştir?",
+            answers: ["Mısırlılar", "Sümerler", "Hititler"],
+            correct: 1,
+            info: "Çivi yazısı (cuneiform), MÖ 3200 civarında Sümerler tarafından geliştirilen dünyanın ilk yazı sistemidir. Kil tabletlere kamış kalemle çizgi ve kama şeklinde yazılırdı."
+          },
+          {
+            q: "Hammurabi Kanunları hangi uygarlığa aittir?",
+            answers: ["Sümer", "Babil", "Asur"],
+            correct: 1,
+            info: "Hammurabi Kanunları, MÖ 1754'te Babil Kralı Hammurabi tarafından hazırlanmış, 282 maddelik dünyanın en eski yazılı kanun koleksiyonlarından biridir."
+          },
+          {
+            q: "Ziggurat nedir?",
+            answers: ["Mezopotamya piramidi", "Asur kalesi", "Sümer tanrısı"],
+            correct: 0,
+            info: "Ziggurat, Mezopotamya'da tanrılara tapınmak için inşa edilen basamaklı tapınak kuleleridir. En ünlüsü Ur Zigguratı'dır. Babil Kulesi'nin de bir ziggurat olduğu düşünülmektedir."
+          },
+          {
+            q: "Asurlular hangi bölgede egemenlik kurmuştur?",
+            answers: ["Güney Mezopotamya", "Kuzey Mezopotamya", "Nil Deltası"],
+            correct: 1,
+            info: "Asur uygarlığı, kuzey Mezopotamya'da (bugünkü Irak ve Suriye'nin bir kısmı) kurulmuştur. MÖ 2000-600 yılları arasında güçlü bir imparatorluk haline gelmiştir."
+          }
+        ]
+      },
+      {
+        id: 3,
+        name: "Anadolu Uygarlıkları",
+        bgColors: { sky: 0x87CEEB, fog: 0xB0C4DE, ground: 0xE8E8E8 },
+        questions: [
+          {
+            q: "Kadeş Antlaşması tarihin bilinen ilk barış antlaşmasıdır. Kimler arasında imzalanmıştır?",
+            answers: ["Hitit-Mısır", "Hitit-Sümer", "Lidya-Pers"],
+            correct: 0,
+            info: "MÖ 1259'da imzalanan Kadeş Antlaşması, Hitit Kralı III. Hattuşili ile Mısır Firavunu II. Ramses arasında yapılmıştır. BM'nin duvarında sergilen bu antlaşma, tarihin ilk yazılı barış belgesidir."
+          },
+          {
+            q: "Pankuş nedir?",
+            answers: ["Hitit tanrısı", "Hitit meclisi", "Hitit savaş arabası"],
+            correct: 1,
+            info: "Pankuş, Hitit devletinde soylulardan ve askeri liderlerden oluşan danışma meclisidir. Kral kararlarını denetleyebilen bu meclis, tarihte ilk anayasal kontrol mekanizmalarından biri sayılır."
+          },
+          {
+            q: "Dünyanın ilk madeni parasını hangi uygarlık bastırmıştır?",
+            answers: ["Pers", "Lidya", "Frigya"],
+            correct: 1,
+            info: "Lidyalılar, MÖ 7. yüzyılda Anadolu'da (bugünkü Manisa çevresinde) elektrum adlı altın-gümüş alaşımından ilk madeni paraları bastırmıştır. Bu buluş dünya ekonomi tarihini değiştirmiştir."
+          },
+          {
+            q: "Fibula nedir?",
+            answers: ["Kemer tokası", "Çengelli iğne/kıyafet iğnesi", "Tunç kılıç"],
+            correct: 1,
+            info: "Fibula, kıyafetleri tutturmaya yarayan çengelli iğne biçimindeki antik takı/aksesuvardır. Demir Çağı Anadolu uygarlıklarında yaygın olarak kullanılmış, dönemin sanat zevkini yansıtır."
+          }
+        ]
+      },
+      {
+        id: 4,
+        name: "Eskişehir",
+        bgColors: { sky: 0x8FA8C8, fog: 0xA8B8C8, ground: 0x6A6A6A },
+        questions: [
+          {
+            q: "UNESCO Dünya Mirası Listesi'ne alınmanın temel kriteri nedir?",
+            answers: ["Çok eski olması", "Olağanüstü evrensel değer", "Büyük şehirde bulunması"],
+            correct: 1,
+            info: "UNESCO Dünya Mirası kriter 'Olağanüstü Evrensel Değer' (Outstanding Universal Value) taşımaktır. Bu değer, kültürel, doğal ya da her ikisine birden ait olabilir. Türkiye'den 21 alan listede yer almaktadır."
+          },
+          {
+            q: "Somut olmayan kültürel miras hangisidir?",
+            answers: ["Odunpazarı Evleri", "Halk oyunları geleneği", "Efes antik kenti"],
+            correct: 1,
+            info: "Somut olmayan kültürel miras; sözlü gelenekler, gösteri sanatları, sosyal uygulamalar, ritüeller, el sanatları bilgisi gibi yaşayan mirası kapsar. Türk kahve kültürü ve Mevlevi Sema töreni bu kapsamdadır."
+          },
+          {
+            q: "Odunpazarı semti hangi şehrimizde bulunmaktadır?",
+            answers: ["Bursa", "Eskişehir", "Kütahya"],
+            correct: 1,
+            info: "Odunpazarı, Eskişehir'in tarihi semtidir. Renkli Osmanlı dönemi ahşap evleriyle ünlü olan bu semt, 2013'te UNESCO Geçici Listesi'ne alınmıştır. Odunpazarı Modern Müzesi (OMM) de bu semtte yer alır."
+          },
+          {
+            q: "İyonya hangi bölgede kurulmuştu?",
+            answers: ["Karadeniz kıyıları", "Ege kıyıları", "Akdeniz iç kesimleri"],
+            correct: 1,
+            info: "İyonya, Ege kıyıları boyunca bugünkü İzmir ve çevresinde kurulan antik Yunan şehirlerinin birliğidir. Miletos, Efes, Smyrna gibi önemli merkezler buradaydı. Felsefe ve bilimin beşiği kabul edilir."
+          }
+        ]
+      }
+    ];
+
+    // ============================================================
+    //  BÖLÜM 2: OYUN DURUM DEĞİŞKENLERİ
+    // ============================================================
+
+    const GameState = {
+      running: false,
+      score: 0,
+      lives: 3,
+      currentLane: 1,         // 0=sol, 1=orta, 2=sağ
+      speed: 0.18,
+      baseSpeed: 0.18,
+      levelIndex: 0,
+      questionIndex: 0,
+      questionActive: false,
+      questionGateZ: -9999,
+      selectedChar: 'girl',
+      charName: 'Elif',
+      transitioning: false,
+      hitCooldown: 0,
+      distanceTraveled: 0,
+      nextQuestionDist: 120,
+      nextObstacleDist: 40,
+      totalQuestionsAnswered: 0,  // Toplam cevaplanan soru sayısı
+      totalQuestions: 16           // Oyundaki toplam soru sayısı (4+4+4+4)
+    };
+
+    // ============================================================
+    //  BÖLÜM 3: THREE.JS – SAHNE, KAMERA, RENDERER
+    // ============================================================
+
+    const canvas = document.getElementById('gameCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Gelişmiş rendering özellikleri
+    if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+    if (renderer.toneMapping !== undefined) {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+    }
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 3.5, 7);
+    camera.lookAt(0, 1, 0);
+
+    // Işıklar - Gerçekçi aydınlatma
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    // Hemisphere light (gökyüzü-zemin renk geçişi)
+    const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0xD2B48C, 0.6);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xFFF5E1, 1.5);
+    dirLight.position.set(5, 15, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.left = -15;
+    dirLight.shadow.camera.right = 15;
+    dirLight.shadow.camera.top = 15;
+    dirLight.shadow.camera.bottom = -15;
+    scene.add(dirLight);
+
+    const pointLight = new THREE.PointLight(0xFFD700, 0.8, 30);
+    pointLight.position.set(0, 5, 0);
+    scene.add(pointLight);
+
+    // ============================================================
+    //  SES MOTORU - THREE.JS AUDIO SYSTEM
+    // ============================================================
+
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    const audioLoader = new THREE.AudioLoader();
+    let bgSound1, bgSound2, bgSound3, bgSound4, currentBgMusic;
+    let coinSound, hitSound, correctAnswerSound, wrongAnswerSound, gameOverSound, gameWinSound;
+    let audioLoaded = false;
+
+    // Ses dosyalarını yükle
+    function loadAudioFiles() {
+      // Seviye müzikleri
+      bgSound1 = new THREE.Audio(listener);
+      bgSound2 = new THREE.Audio(listener);
+      bgSound3 = new THREE.Audio(listener);
+      bgSound4 = new THREE.Audio(listener);
+
+      coinSound = new THREE.Audio(listener);
+      hitSound = new THREE.Audio(listener);
+      correctAnswerSound = new THREE.Audio(listener);
+      wrongAnswerSound = new THREE.Audio(listener);
+      gameOverSound = new THREE.Audio(listener);
+      gameWinSound = new THREE.Audio(listener);
+
+      // Seviye 1 müziği (Kapadokya)
+      audioLoader.load('assets/sounds/bgSound1.mp3', function (buffer) {
+        bgSound1.setBuffer(buffer);
+        bgSound1.setLoop(true);
+        bgSound1.setVolume(0.3);
+      }, undefined, function (err) {
+        console.warn('bgSound1 yüklenemedi:', err);
+      });
+
+      // Seviye 2 müziği (Mezopotamya)
+      audioLoader.load('assets/sounds/bgSound2.mp3', function (buffer) {
+        bgSound2.setBuffer(buffer);
+        bgSound2.setLoop(true);
+        bgSound2.setVolume(0.3);
+      }, undefined, function (err) {
+        console.warn('bgSound2 yüklenemedi:', err);
+      });
+
+      // Seviye 3 müziği (Anadolu Uygarlıkları)
+      audioLoader.load('assets/sounds/bgSound3.mp3', function (buffer) {
+        bgSound3.setBuffer(buffer);
+        bgSound3.setLoop(true);
+        bgSound3.setVolume(0.3);
+      }, undefined, function (err) {
+        console.warn('bgSound3 yüklenemedi:', err);
+      });
+
+      // Seviye 4 müziği (Eskişehir)
+      audioLoader.load('assets/sounds/bgSound4.mp3', function (buffer) {
+        bgSound4.setBuffer(buffer);
+        bgSound4.setLoop(true);
+        bgSound4.setVolume(0.3);
+      }, undefined, function (err) {
+        console.warn('bgSound4 yüklenemedi:', err);
+      });
+
+      // Para toplama sesi
+      audioLoader.load('assets/sounds/coinSound.mp3', function (buffer) {
+        coinSound.setBuffer(buffer);
+        coinSound.setVolume(0.5);
+      }, undefined, function (err) {
+        console.warn('coinSound yüklenemedi:', err);
+      });
+
+      // Çarpma sesi
+      audioLoader.load('assets/sounds/hitSound.mp3', function (buffer) {
+        hitSound.setBuffer(buffer);
+        hitSound.setVolume(0.6);
+      }, undefined, function (err) {
+        console.warn('hitSound yüklenemedi:', err);
+      });
+
+      // Doğru cevap sesi
+      audioLoader.load('assets/sounds/correctAnswerSound.mp3', function (buffer) {
+        correctAnswerSound.setBuffer(buffer);
+        correctAnswerSound.setVolume(0.7);
+      }, undefined, function (err) {
+        console.warn('correctAnswerSound yüklenemedi:', err);
+      });
+
+      // Yanlış cevap sesi
+      audioLoader.load('assets/sounds/wrongAnswerSound.mp3', function (buffer) {
+        wrongAnswerSound.setBuffer(buffer);
+        wrongAnswerSound.setVolume(0.6);
+      }, undefined, function (err) {
+        console.warn('wrongAnswerSound yüklenemedi:', err);
+      });
+
+      // Game Over sesi
+      audioLoader.load('assets/sounds/gameOver.mp3', function (buffer) {
+        gameOverSound.setBuffer(buffer);
+        gameOverSound.setVolume(0.5);
+      }, undefined, function (err) {
+        console.warn('gameOver yüklenemedi:', err);
+      });
+
+      // Game Win sesi (Kazanma)
+      audioLoader.load('assets/sounds/gameWin.mp3', function (buffer) {
+        gameWinSound.setBuffer(buffer);
+        gameWinSound.setVolume(0.6);
+      }, undefined, function (err) {
+        console.warn('gameWin yüklenemedi:', err);
+      });
+
+      audioLoaded = true;
+    }
+
+    // Ses dosyalarını yükle
+    loadAudioFiles();
+
+    // Müzik kontrol fonksiyonları
+    function playLevelMusic(levelIndex) {
+      // Önce tüm müzikleri durdur
+      stopAllMusic();
+
+      // Seviyeye göre müzik seç
+      const musicArray = [bgSound1, bgSound2, bgSound3, bgSound4];
+      currentBgMusic = musicArray[levelIndex];
+
+      // Müziği başlat
+      if (audioLoaded && currentBgMusic && currentBgMusic.buffer && !currentBgMusic.isPlaying) {
+        currentBgMusic.play();
+      }
+    }
+
+    function stopAllMusic() {
+      const allMusic = [bgSound1, bgSound2, bgSound3, bgSound4];
+      allMusic.forEach(music => {
+        if (music && music.isPlaying) {
+          music.stop();
+        }
+      });
+      currentBgMusic = null;
+    }
+
+    // Arka Plan (Sis/Fog)
+    scene.fog = new THREE.FogExp2(0xD4A472, 0.018);
+
+    // ============================================================
+    //  BÖLÜM 4: YOL (PLATFORM) SİSTEMİ
+    // ============================================================
+
+    const LANE_X = [-2.2, 0, 2.2];    // 3 şeridin X pozisyonları
+    const TILE_LENGTH = 20;
+    const TILE_COUNT = 10;
+    const tiles = [];
+
+    // Yol dokusu - prosedürel
+    function createTileMaterial(levelIdx) {
+      const colors = [0xD2B48C, 0xD2B48C, 0xE8E8E8, 0x6A6A6A];
+
+      // Seviye 4 için dokusuz orijinal zemin rengine döndür
+      if (levelIdx === 3) {
+        return new THREE.MeshLambertMaterial({ color: colors[3] });
+      }
+
+      return new THREE.MeshLambertMaterial({ color: colors[levelIdx] || 0xD2B48C });
+    }
+
+    function createTile(z) {
+      const geo = new THREE.BoxGeometry(8, 0.4, TILE_LENGTH);
+      const mat = createTileMaterial(GameState.levelIndex);
+      const tile = new THREE.Mesh(geo, mat);
+      tile.position.set(0, -0.2, z);
+      tile.receiveShadow = true;
+      scene.add(tile);
+
+      // Şerit çizgileri
+      for (let i = -1; i <= 1; i += 2) {
+        const lineGeo = new THREE.BoxGeometry(0.08, 0.02, TILE_LENGTH);
+        const lineMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, opacity: 0.3, transparent: true });
+        const line = new THREE.Mesh(lineGeo, lineMat);
+        line.position.set(i * 1.1, 0.22, 0);
+        tile.add(line);
+      }
+
+      return tile;
+    }
+
+    function initTiles() {
+      tiles.forEach(t => scene.remove(t));
+      tiles.length = 0;
+      for (let i = 0; i < TILE_COUNT; i++) {
+        tiles.push(createTile(-i * TILE_LENGTH));
+      }
+    }
+
+    // ============================================================
+    //  BÖLÜM 5: KARAKTER MODELİ (Low-Poly Geometrik)
+    // ============================================================
+
+    let character;
+    let charTargetX = 0;
+    let charCurrentX = 0;
+    let charBobTime = 0;
+    let charRunAnim = 0;
+
+    function createCharacter(isGirl) {
+      if (character) scene.remove(character);
+
+      const group = new THREE.Group();
+
+      const skinColor = isGirl ? 0xFFCBA4 : 0xFFB88C;
+      const bodyColor = isGirl ? 0xE040FB : 0x2196F3;
+      const hairColor = isGirl ? 0x4A2C0A : 0x1A1A1A;
+      const pantColor = isGirl ? 0xFF80AB : 0x1565C0;
+
+      // Gövde
+      const bodyGeo = new THREE.BoxGeometry(0.6, 0.7, 0.3);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: bodyColor,
+        roughness: 0.7,
+        metalness: 0.0
+      });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.85;
+      body.castShadow = true;
+      group.add(body);
+
+      // Baş
+      const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
+      const headMat = new THREE.MeshStandardMaterial({
+        color: skinColor,
+        roughness: 0.6,
+        metalness: 0.0
+      });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 1.5;
+      head.castShadow = true;
+      group.add(head);
+
+      // Saç
+      const hairGeo = new THREE.BoxGeometry(0.48, isGirl ? 0.3 : 0.15, 0.48);
+      const hairMat = new THREE.MeshStandardMaterial({
+        color: hairColor,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      const hair = new THREE.Mesh(hairGeo, hairMat);
+      hair.position.y = isGirl ? 1.82 : 1.72;
+      group.add(hair);
+
+      if (isGirl) {
+        const tailGeo = new THREE.CylinderGeometry(0.05, 0.02, 0.4);
+        const tail = new THREE.Mesh(tailGeo, hairMat);
+        tail.position.set(0.15, 1.6, -0.22);
+        tail.rotation.z = 0.3;
+        group.add(tail);
+      }
+
+      // Kollar
+      const armGeo = new THREE.BoxGeometry(0.2, 0.55, 0.2);
+      const armMat = new THREE.MeshStandardMaterial({
+        color: bodyColor,
+        roughness: 0.7,
+        metalness: 0.0
+      });
+      const leftArm = new THREE.Mesh(armGeo, armMat);
+      leftArm.position.set(-0.42, 0.82, 0);
+      leftArm.name = 'leftArm';
+      leftArm.castShadow = true;
+      group.add(leftArm);
+      const rightArm = new THREE.Mesh(armGeo, armMat);
+      rightArm.position.set(0.42, 0.82, 0);
+      rightArm.name = 'rightArm';
+      rightArm.castShadow = true;
+      group.add(rightArm);
+
+      // Bacaklar
+      const legGeo = new THREE.BoxGeometry(0.24, 0.6, 0.24);
+      const legMat = new THREE.MeshStandardMaterial({
+        color: pantColor,
+        roughness: 0.75,
+        metalness: 0.0
+      });
+      const leftLeg = new THREE.Mesh(legGeo, legMat);
+      leftLeg.position.set(-0.18, 0.3, 0);
+      leftLeg.name = 'leftLeg';
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+      const rightLeg = new THREE.Mesh(legGeo, legMat);
+      rightLeg.position.set(0.18, 0.3, 0);
+      rightLeg.name = 'rightLeg';
+      rightLeg.castShadow = true;
+      group.add(rightLeg);
+
+      // Ayaklar
+      const footGeo = new THREE.BoxGeometry(0.26, 0.12, 0.38);
+      const footMat = new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      const leftFoot = new THREE.Mesh(footGeo, footMat);
+      leftFoot.position.set(-0.18, 0.06, 0.06);
+      leftFoot.castShadow = true;
+      group.add(leftFoot);
+      const rightFoot = new THREE.Mesh(footGeo, footMat);
+      rightFoot.position.set(0.18, 0.06, 0.06);
+      rightFoot.castShadow = true;
+      group.add(rightFoot);
+
+      // Yüz (gözler)
+      const eyeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.05);
+      const eyeMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.3,
+        metalness: 0.0
+      });
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-0.1, 1.53, 0.23);
+      group.add(leftEye);
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(0.1, 1.53, 0.23);
+      group.add(rightEye);
+
+      group.position.set(0, 0, 2);
+      scene.add(group);
+      character = group;
+    }
+
+    // ============================================================
+    //  BÖLÜM 6: ÇEVRE ELEMANLARI – 4 SEVİYE DETAYLI SİSTEM
+    // ============================================================
+
+    const envObjects = [];
+    const hotAirBalloons = [];   // Seviye 1: sıcak hava balonları
+    let riverMesh = null;        // Seviye 2: nehir düzlemi
+    const streetLights = [];     // Seviye 4: sokak lambaları (PointLight)
+
+    // ── SEVİYE 1 YARDIMCI: Tek peri bacası ──
+    function createFairyChimney(x, z, scale) {
+      const group = new THREE.Group();
+      const bodyH = (2.5 + Math.random() * 2) * scale;
+      const bodyGeo = new THREE.CylinderGeometry(0.18 * scale, 0.55 * scale, bodyH, 16);
+
+      // Prosedürel kaya dokusu - Sıcak Kapadokya tonları
+      const bodyCanvas = document.createElement('canvas');
+      bodyCanvas.width = 128; bodyCanvas.height = 256;
+      const bCtx = bodyCanvas.getContext('2d');
+      // Sıcak kum/peach tonları (FFDAB9 ailesi)
+      const baseColor = `hsl(${25 + Math.random() * 12}, 55%, ${70 + Math.random() * 12}%)`;
+      bCtx.fillStyle = baseColor;
+      bCtx.fillRect(0, 0, 128, 256);
+
+      // Kaya detayları
+      for (let i = 0; i < 80; i++) {
+        bCtx.fillStyle = `rgba(${180 + Math.random() * 40}, ${140 + Math.random() * 30}, ${100 + Math.random() * 20}, ${0.1 + Math.random() * 0.3})`;
+        bCtx.fillRect(Math.random() * 128, Math.random() * 256, 3 + Math.random() * 8, 3 + Math.random() * 8);
+      }
+
+      const bodyTex = new THREE.CanvasTexture(bodyCanvas);
+      bodyTex.wrapS = THREE.RepeatWrapping;
+      bodyTex.wrapT = THREE.RepeatWrapping;
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        map: bodyTex,
+        roughness: 0.9,
+        metalness: 0.1,
+        color: new THREE.Color().setHSL(0.08, 0.3, 0.78 + Math.random() * 0.12)
+      });
+
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = bodyH / 2;
+      body.castShadow = true;
+      group.add(body);
+
+      const capGeo = new THREE.SphereGeometry(0.52 * scale, 16, 12);
+      capGeo.scale(1, 0.45, 1);
+
+      // Şapka dokusu
+      const capCanvas = document.createElement('canvas');
+      capCanvas.width = 128; capCanvas.height = 128;
+      const cCtx = capCanvas.getContext('2d');
+      cCtx.fillStyle = `hsl(${20 + Math.random() * 10}, 45%, ${30 + Math.random() * 8}%)`;
+      cCtx.fillRect(0, 0, 128, 128);
+
+      for (let i = 0; i < 60; i++) {
+        cCtx.fillStyle = `rgba(${80 + Math.random() * 40}, ${50 + Math.random() * 30}, ${30 + Math.random() * 20}, ${0.2 + Math.random() * 0.4})`;
+        cCtx.fillRect(Math.random() * 128, Math.random() * 128, 4 + Math.random() * 10, 4 + Math.random() * 10);
+      }
+
+      const capTex = new THREE.CanvasTexture(capCanvas);
+      const capMat = new THREE.MeshStandardMaterial({
+        map: capTex,
+        roughness: 0.85,
+        metalness: 0.05,
+        color: new THREE.Color().setHSL(0.06, 0.4, 0.28 + Math.random() * 0.1)
+      });
+
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.y = bodyH + 0.12 * scale;
+      cap.castShadow = true;
+      group.add(cap);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      envObjects.push(group);
+      return group;
+    }
+
+    // ── SEVİYE 1 YARDIMCI: Peri bacası kümesi ──
+    function spawnFairyChimneyCluster(z) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const count = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < count; i++) {
+        const x = side * (5.5 + Math.random() * 2.5);
+        const dz = (Math.random() - 0.5) * 8;
+        const sc = 0.55 + Math.random() * 0.7;
+        createFairyChimney(x, z + dz, sc);
+      }
+      if (Math.random() > 0.45) {
+        const xOther = -side * (5.2 + Math.random() * 2);
+        createFairyChimney(xOther, z + (Math.random() - 0.5) * 5, 0.4 + Math.random() * 0.5);
+      }
+    }
+
+    // ── SEVİYE 1 YARDIMCI: Yol kenarı kayalar ──
+    function spawnRoadSideRocks(z) {
+      const count = 2 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        const group = new THREE.Group();
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const x = side * (4.2 + Math.random() * 3);
+        const sc = 0.15 + Math.random() * 0.35;
+        const geo = new THREE.DodecahedronGeometry(sc, 1);
+        const mat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color().setHSL(0.07, 0.25, 0.55 + Math.random() * 0.2),
+          roughness: 0.95,
+          metalness: 0.05
+        });
+        const rock = new THREE.Mesh(geo, mat);
+        rock.rotation.set(Math.random(), Math.random(), Math.random());
+        rock.castShadow = true;
+        group.add(rock);
+        group.position.set(x, sc * 0.5, z + (Math.random() - 0.5) * 6);
+        scene.add(group);
+        envObjects.push(group);
+      }
+    }
+
+    // ── SEVİYE 1 YARDIMCI: Sıcak hava balonları (sahne başında bir kez) ──
+    function createHotAirBalloons() {
+      hotAirBalloons.forEach(b => scene.remove(b.group));
+      hotAirBalloons.length = 0;
+      // Kapadokya balon renkleri: Kırmızı, Mavi, Sarı
+      const balloonColors = [
+        [0xE53935, 0xFFCDD2], // Kırmızı + Açık Kırmızı
+        [0x1E88E5, 0xBBDEFB], // Mavi + Açık Mavi  
+        [0xFDD835, 0xFFF9C4], // Sarı + Açık Sarı
+        [0xE53935, 0xFFCDD2], // Kırmızı (tekrar)
+        [0x1E88E5, 0xBBDEFB], // Mavi (tekrar)
+        [0xFDD835, 0xFFF9C4]  // Sarı (tekrar)
+      ];
+      for (let i = 0; i < 8; i++) {
+        const group = new THREE.Group();
+        const cols = balloonColors[i % balloonColors.length];
+        // BÜYÜK BALONLAR (2.5x büyütülmüş)
+        const ballGeo = new THREE.SphereGeometry(2.5, 32, 24);
+        const ball = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({
+          color: cols[0],
+          roughness: 0.6,
+          metalness: 0.1,
+          emissive: cols[0],
+          emissiveIntensity: 0.1
+        }));
+        ball.castShadow = true;
+        group.add(ball);
+        for (let s = 0; s < 8; s++) {
+          const stripeGeo = new THREE.BoxGeometry(0.4, 4.8, 0.4);  // Şeritler de büyüdü
+          const stripe = new THREE.Mesh(stripeGeo, new THREE.MeshStandardMaterial({
+            color: s % 2 === 0 ? cols[0] : cols[1],
+            roughness: 0.7,
+            metalness: 0.05
+          }));
+          const angle = (s / 8) * Math.PI * 2;
+          stripe.position.set(Math.cos(angle) * 2.2, 0, Math.sin(angle) * 2.2);  // 1.1 → 2.2
+          stripe.rotation.y = angle;
+          group.add(stripe);
+        }
+        // Büyük sepet
+        const basket = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.0, 1.4), new THREE.MeshStandardMaterial({
+          color: 0x8B5A2B,
+          roughness: 0.95,
+          metalness: 0.0
+        }));
+        basket.position.y = -3.5;  // -1.8 → -3.5
+        basket.castShadow = true;
+        group.add(basket);
+        for (let r = 0; r < 4; r++) {
+          const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.0), new THREE.MeshStandardMaterial({
+            color: 0x6B4423,
+            roughness: 0.9,
+            metalness: 0.0
+          }));
+          const ra = (r / 4) * Math.PI * 2;
+          rope.position.set(Math.cos(ra) * 0.56, -2.5, Math.sin(ra) * 0.56);  // Ölçeklendirilmiş
+          rope.rotation.z = Math.cos(ra) * 0.4;
+          rope.rotation.x = Math.sin(ra) * 0.4;
+          group.add(rope);
+        }
+        // DAHA YAKIN pozisyonlar (x: ±25, y: 8-15, z: -30 -100)
+        const bx = (Math.random() - 0.5) * 50;   // 70 → 50 (daha dar alan)
+        const by = 8 + Math.random() * 8;       // 14-24 → 8-16 (daha alçak/yakın)
+        const bz = -30 - Math.random() * 80;    // -50-150 → -30-110 (çok daha yakın)
+        group.position.set(bx, by, bz);
+        scene.add(group);
+        hotAirBalloons.push({ group, baseY: by, phase: Math.random() * Math.PI * 2, speed: 0.25 + Math.random() * 0.35 });
+      }
+    }
+
+    // ── SEVİYE 1: Balon + Bulut animasyonu ──
+    function updateHotAirBalloons(time) {
+      hotAirBalloons.forEach(b => {
+        b.group.position.y = b.baseY + Math.sin(time * 0.0005 * b.speed + b.phase) * 1.2;
+        b.group.rotation.y = Math.sin(time * 0.0003 * b.speed) * 0.1;
+      });
+
+      // Bulutların yavaş hareketi
+      envObjects.forEach(obj => {
+        if (obj.userData.type === 'cloud') {
+          obj.position.x += obj.userData.speed;
+          obj.position.z += obj.userData.speed * 0.5;
+          // Döngüsel hareket
+          if (obj.position.x > 30) obj.position.x = -30;
+          if (obj.position.z > 20) obj.position.z = -150;
+        }
+      });
+    }
+
+    // ── SEVİYE 2 YARDIMCI: Ziggurat ──
+    function createZiggurat(x, z, scale) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xC8A870,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      const darkMat = new THREE.MeshStandardMaterial({
+        color: 0xA0784A,
+        roughness: 0.95,
+        metalness: 0.0
+      });
+      for (let f = 0; f < 4; f++) {
+        const w = (2.8 - f * 0.55) * scale;
+        const h = 0.55 * scale;
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), f % 2 === 0 ? mat : darkMat);
+        mesh.position.y = f * h + h / 2;
+        mesh.castShadow = true;
+        group.add(mesh);
+      }
+      const topMesh = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.6 * scale, 0.7 * scale), new THREE.MeshStandardMaterial({
+        color: 0xE8C87A,
+        roughness: 0.85,
+        metalness: 0.1
+      }));
+      topMesh.position.y = 4 * 0.55 * scale + 0.3 * scale;
+      group.add(topMesh);
+      // Çivi yazısı tablet
+      const tabCanvas = document.createElement('canvas');
+      tabCanvas.width = 64; tabCanvas.height = 48;
+      const tCtx = tabCanvas.getContext('2d');
+      tCtx.fillStyle = '#9E8060'; tCtx.fillRect(0, 0, 64, 48);
+      tCtx.strokeStyle = '#5A3A1A'; tCtx.lineWidth = 1.5;
+      for (let i = 0; i < 14; i++) {
+        const ty = 4 + i * 3;
+        tCtx.beginPath(); tCtx.moveTo(4, ty); tCtx.lineTo(30 + Math.random() * 28, ty); tCtx.stroke();
+        if (Math.random() > 0.4) { const cx = 6 + Math.random() * 50; tCtx.beginPath(); tCtx.moveTo(cx, ty - 2); tCtx.lineTo(cx + 4, ty + 4); tCtx.stroke(); }
+      }
+      const tablet = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.35 * scale, 0.06), new THREE.MeshStandardMaterial({
+        map: new THREE.CanvasTexture(tabCanvas),
+        roughness: 0.9,
+        metalness: 0.0
+      }));
+      tablet.position.set(0, 0.55 * scale, (2.8 - 0.55) * scale / 2 + 0.04);
+      group.add(tablet);
+      group.position.set(x, 0, z);
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── SEVİYE 2 YARDIMCI: Palmiye ──
+    function createPalmTree(x, z, scale) {
+      const group = new THREE.Group();
+      const h = (2.8 + Math.random() * 1.5) * scale;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.09 * scale, 0.16 * scale, h, 12), new THREE.MeshStandardMaterial({
+        color: 0x7B5020,
+        roughness: 0.95,
+        metalness: 0.0
+      }));
+      trunk.position.y = h / 2;
+      trunk.rotation.z = (Math.random() - 0.5) * 0.25;
+      trunk.castShadow = true;
+      group.add(trunk);
+      const leafCount = 5 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < leafCount; i++) {
+        const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.06 * scale, 1.1 * scale), new THREE.MeshStandardMaterial({
+          color: new THREE.Color().setHSL(0.33, 0.7, 0.25 + Math.random() * 0.15),
+          roughness: 0.7,
+          metalness: 0.0
+        }));
+        const angle = (i / leafCount) * Math.PI * 2;
+        leaf.position.set(Math.cos(angle) * 0.55 * scale, h, Math.sin(angle) * 0.55 * scale);
+        leaf.rotation.y = angle; leaf.rotation.z = 0.35 + Math.random() * 0.2;
+        leaf.castShadow = true;
+        group.add(leaf);
+      }
+      for (let i = 0; i < 4; i++) {
+        const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.08 * scale, 8, 6), new THREE.MeshStandardMaterial({
+          color: 0xD4700A,
+          roughness: 0.6,
+          metalness: 0.1
+        }));
+        const fa = (i / 4) * Math.PI * 2;
+        fruit.position.set(Math.cos(fa) * 0.3 * scale, h - 0.1, Math.sin(fa) * 0.3 * scale);
+        group.add(fruit);
+      }
+      group.position.set(x, 0, z);
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── SEVİYE 2 YARDIMCI: Nehir ──
+    function createRiver(side) {
+      if (riverMesh) { scene.remove(riverMesh); riverMesh = null; }
+      const rivCanvas = document.createElement('canvas');
+      rivCanvas.width = 128; rivCanvas.height = 256;
+      const rc = rivCanvas.getContext('2d');
+      const grad = rc.createLinearGradient(0, 0, 128, 0);
+      grad.addColorStop(0, '#1A5FAE'); grad.addColorStop(0.5, '#2E86C1'); grad.addColorStop(1, '#1A5FAE');
+      rc.fillStyle = grad; rc.fillRect(0, 0, 128, 256);
+      rc.strokeStyle = 'rgba(100,200,255,0.35)'; rc.lineWidth = 2;
+      for (let wy = 0; wy < 256; wy += 14) {
+        rc.beginPath();
+        for (let wx = 0; wx < 128; wx += 4) rc.lineTo(wx, wy + Math.sin(wx * 0.2) * 3);
+        rc.stroke();
+      }
+      const rivTex = new THREE.CanvasTexture(rivCanvas);
+      rivTex.wrapS = THREE.RepeatWrapping; rivTex.wrapT = THREE.RepeatWrapping;
+      rivTex.repeat.set(1, 4);
+      riverMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 600), new THREE.MeshLambertMaterial({ map: rivTex, transparent: true, opacity: 0.82 }));
+      riverMesh.rotation.x = -Math.PI / 2;
+      riverMesh.position.set(side * 7, 0.05, -150);
+      riverMesh.userData.rivTex = rivTex;
+      riverMesh.userData.offsetY = 0;
+      scene.add(riverMesh);
+      for (let i = 0; i < 20; i++) {
+        const block = new THREE.Mesh(new THREE.BoxGeometry(0.5 + Math.random() * 0.5, 0.25, 0.5 + Math.random() * 0.4), new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(0.32, 0.65, 0.28 + Math.random() * 0.12) }));
+        block.position.set(side * (5.5 + Math.random() * 1.2), 0.12, -10 - Math.random() * 280);
+        block.castShadow = true;
+        scene.add(block);
+        envObjects.push(block);
+      }
+    }
+
+    // ── SEVİYE 2: Nehir animasyonu ──
+    function updateRiver(dt) {
+      if (riverMesh && riverMesh.userData.rivTex) {
+        riverMesh.userData.offsetY += dt * 0.002;
+        riverMesh.userData.rivTex.offset.y = riverMesh.userData.offsetY;
+      }
+    }
+
+    // ── SEVİYE 2 YARDIMCI: Çivi yazısı tableti ──
+    function spawnCuneiformTablet(z) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const x = side * (4.5 + Math.random() * 2);
+      const group = new THREE.Group();
+      const tabCanvas = document.createElement('canvas');
+      tabCanvas.width = 64; tabCanvas.height = 80;
+      const tc = tabCanvas.getContext('2d');
+      tc.fillStyle = '#8A7055'; tc.fillRect(0, 0, 64, 80);
+      tc.strokeStyle = '#3A2010'; tc.lineWidth = 1.2;
+      for (let row = 0; row < 9; row++) {
+        const ty = 6 + row * 8;
+        for (let col = 0; col < 5; col++) {
+          const tx = 5 + col * 11;
+          tc.beginPath(); tc.moveTo(tx, ty); tc.lineTo(tx + 7, ty); tc.stroke();
+          if (Math.random() > 0.3) { tc.beginPath(); tc.moveTo(tx + 3, ty - 3); tc.lineTo(tx + 5, ty + 3); tc.stroke(); }
+        }
+      }
+      const stone = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.2), new THREE.MeshStandardMaterial({
+        map: new THREE.CanvasTexture(tabCanvas),
+        roughness: 0.95,
+        metalness: 0.0
+      }));
+      stone.castShadow = true;
+      group.add(stone);
+      group.position.set(x, 0.45, z);
+      group.rotation.y = (Math.random() - 0.5) * 0.4;
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── SEVİYE 3 YARDIMCI: Mermer sütun ──
+    function createColumn(x, z, height, scale) {
+      const group = new THREE.Group();
+      const marbleMat = new THREE.MeshStandardMaterial({
+        color: 0xF0EDE0,
+        roughness: 0.3,
+        metalness: 0.2
+      });
+      const darkMat = new THREE.MeshStandardMaterial({
+        color: 0xC8C4B0,
+        roughness: 0.4,
+        metalness: 0.1
+      });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.65 * scale, 0.2 * scale, 0.65 * scale), darkMat);
+      base.position.y = 0.1 * scale; base.castShadow = true;
+      group.add(base);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.17 * scale, 0.21 * scale, height * scale, 16), marbleMat);
+      col.position.y = (height * scale / 2) + 0.2 * scale; col.castShadow = true;
+      group.add(col);
+      const capMesh = new THREE.Mesh(new THREE.BoxGeometry(0.62 * scale, 0.22 * scale, 0.62 * scale), darkMat);
+      capMesh.position.y = height * scale + 0.31 * scale;
+      group.add(capMesh);
+      group.position.set(x, 0, z);
+      scene.add(group);
+      envObjects.push(group);
+      return group;
+    }
+
+    // ── SEVİYE 3 YARDIMCI: Antik tiyatro ──
+    function createAncientTheatre(side, z) {
+      const group = new THREE.Group();
+      const stoneMat = new THREE.MeshStandardMaterial({
+        color: 0xD4C8A0,
+        roughness: 0.85,
+        metalness: 0.0
+      });
+      for (let s = 0; s < 5; s++) {
+        const r = 1.4 + s * 0.7;
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.28, 18, 1, false, 0, Math.PI), stoneMat);
+        mesh.position.y = s * 0.28;
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+      group.position.set(side * 9, 0, z);
+      group.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── SEVİYE 3 YARDIMCI: Lidya parası ──
+    function createLydianCoin(x, y, z) {
+      const group = new THREE.Group();
+      const coinCanvas = document.createElement('canvas');
+      coinCanvas.width = 128; coinCanvas.height = 128;
+      const cc = coinCanvas.getContext('2d');
+      const grad = cc.createRadialGradient(64, 64, 10, 64, 64, 64);
+      grad.addColorStop(0, '#FFE066'); grad.addColorStop(0.7, '#FFD700'); grad.addColorStop(1, '#B8860B');
+      cc.fillStyle = grad; cc.arc(64, 64, 62, 0, Math.PI * 2); cc.fill();
+      cc.fillStyle = '#8B6914'; cc.beginPath(); cc.ellipse(64, 72, 28, 20, 0, 0, Math.PI * 2); cc.fill();
+      cc.beginPath(); cc.arc(85, 58, 16, 0, Math.PI * 2); cc.fill();
+      cc.fillStyle = '#A0791E'; cc.beginPath(); cc.arc(85, 58, 19, 0, Math.PI * 2); cc.fill();
+      cc.fillStyle = '#8B6914'; cc.beginPath(); cc.arc(85, 58, 13, 0, Math.PI * 2); cc.fill();
+      cc.strokeStyle = '#8B6914'; cc.lineWidth = 3; cc.beginPath(); cc.arc(64, 64, 60, 0, Math.PI * 2); cc.stroke();
+      const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.1, 32), new THREE.MeshStandardMaterial({
+        map: new THREE.CanvasTexture(coinCanvas),
+        color: 0xFFD700,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.2
+      }));
+      coin.castShadow = true;
+      group.add(coin);
+      // ✓ GÜNCELLEME 1: Paraları yola dik (X ekseni etrafında 90° döndür)
+      // Böylece Cylinder'in dairesel yüzü kameranın yüzüne bakacak, altın aslan görünecek
+      group.rotation.x = Math.PI / 2;
+      group.position.set(x, y, z);
+      group.userData.isCoin = true;
+      group.userData.rotSpeed = 0.02 + Math.random() * 0.02;
+      scene.add(group);
+      envObjects.push(group);
+      return group;
+    }
+
+    // ── SEVİYE 3: Lidya parası animasyonu ──
+    function updateLydianCoins() {
+      envObjects.forEach(obj => {
+        if (obj.userData.isCoin) {
+          obj.rotation.y += obj.userData.rotSpeed;
+        }
+      });
+    }
+
+    // ── SEVİYE 3 YARDIMCI: Taş kapı ──
+    // ✓ GÜNCELLEME 2: Kapıları yol merkezinden kaldır, sadece kenarlarında kalsın
+    function createStoneGate(z) {
+      const group = new THREE.Group();
+      const stoneMat = new THREE.MeshStandardMaterial({
+        color: 0xAA9977,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      const darkStoneMat = new THREE.MeshStandardMaterial({
+        color: 0x7A6A5A,
+        roughness: 0.95,
+        metalness: 0.0
+      });
+
+      // Kapıyı yol kenarına taşı (solda veya sağda)
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const offsetX = side * 7.5;  // Yolun dışına taşı, karakterin yolundan çıkarsa çarpsın
+
+      [-1, 1].forEach(s => {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 3.5, 0.8), stoneMat);
+        pillar.position.set(s * 2.2, 1.75, 0); pillar.castShadow = true;
+        group.add(pillar);
+        const lion = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.15), darkStoneMat);
+        lion.position.set(s * 2.2, 1.2, 0.48);
+        group.add(lion);
+      });
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.6, 0.8), stoneMat);
+      lintel.position.set(0, 3.8, 0); lintel.castShadow = true;
+      group.add(lintel);
+      group.position.set(offsetX, 0, z);  // Merkezden yol kenarına
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── SEVİYE 4 YARDIMCI: Odunpazarı evi ──
+    function createOdunpazariHouse(side, z) {
+      const group = new THREE.Group();
+      const houseColors = [0xF5F0E0, 0xEDE0C8, 0xFFFAF0, 0xF0EAD6];
+      const cumbaColors = [0x8B4513, 0x7A3B1A, 0xA0522D, 0x6B3510];
+      const roofColors = [0xB22222, 0x8B1A1A, 0xCC3333, 0x991414];
+      const houseW = 1.6 + Math.random() * 0.5;
+      const houseH = 2.0 + Math.random() * 0.5;
+      const houseD = 1.4;
+      const base = new THREE.Mesh(new THREE.BoxGeometry(houseW, houseH, houseD), new THREE.MeshStandardMaterial({
+        color: houseColors[Math.floor(Math.random() * 4)],
+        roughness: 0.8,
+        metalness: 0.0
+      }));
+      base.position.y = houseH / 2; base.castShadow = true; base.receiveShadow = true;
+      group.add(base);
+      const cumbaW = houseW * 0.9; const cumbaH = houseH * 0.6;
+      const cumba = new THREE.Mesh(new THREE.BoxGeometry(cumbaW, cumbaH, houseD * 0.95), new THREE.MeshStandardMaterial({
+        color: cumbaColors[Math.floor(Math.random() * 4)],
+        roughness: 0.7,
+        metalness: 0.0
+      }));
+      cumba.position.set(side > 0 ? -0.12 : 0.12, houseH + cumbaH / 2, 0.08 * side);
+      cumba.castShadow = true;
+      group.add(cumba);
+      const winMat = new THREE.MeshStandardMaterial({
+        color: 0x1A2A3A,
+        roughness: 0.3,
+        metalness: 0.1
+      });
+      [[-cumbaW * 0.28, 0], [cumbaW * 0.28, 0], [0, 0]].forEach(([wx]) => {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.06), winMat);
+        win.position.set(wx, houseH + cumbaH / 2, houseD * 0.48 + 0.01);
+        group.add(win);
+      });
+      const totalH = houseH + cumbaH;
+      const roof = new THREE.Mesh(new THREE.ConeGeometry((houseW / 2) * 1.1, 0.9, 4), new THREE.MeshStandardMaterial({
+        color: roofColors[Math.floor(Math.random() * 4)],
+        roughness: 0.6,
+        metalness: 0.1
+      }));
+      roof.position.y = totalH + 0.45; roof.rotation.y = Math.PI / 4; roof.castShadow = true;
+      group.add(roof);
+      // Türk Bayrağı
+      if (Math.random() > 0.5) {
+        const flagCanvas = document.createElement('canvas');
+        flagCanvas.width = 64; flagCanvas.height = 40;
+        const fc = flagCanvas.getContext('2d');
+        fc.fillStyle = '#E30A17'; fc.fillRect(0, 0, 64, 40);
+        fc.fillStyle = '#FFFFFF'; fc.beginPath(); fc.arc(22, 20, 10, 0, Math.PI * 2); fc.fill();
+        fc.fillStyle = '#E30A17'; fc.beginPath(); fc.arc(26, 20, 8, 0, Math.PI * 2); fc.fill();
+        fc.fillStyle = '#FFFFFF';
+        const sx = 38, sy = 20, sr = 5;
+        for (let p = 0; p < 5; p++) { const a = (p * 4 * Math.PI / 5) - Math.PI / 2; fc[p === 0 ? 'moveTo' : 'lineTo'](sx + sr * Math.cos(a), sy + sr * Math.sin(a)); }
+        fc.closePath(); fc.fill();
+        const flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.34), new THREE.MeshStandardMaterial({
+          map: new THREE.CanvasTexture(flagCanvas),
+          side: THREE.DoubleSide,
+          roughness: 0.8,
+          metalness: 0.0
+        }));
+        flagMesh.position.set(side > 0 ? -houseW * 0.3 : houseW * 0.3, totalH * 0.75, houseD * 0.52);
+        group.add(flagMesh);
+      }
+      // Sokak lambası
+      if (Math.random() > 0.4) {
+        const poleMat = new THREE.MeshStandardMaterial({
+          color: 0x4A3A2A,
+          roughness: 0.7,
+          metalness: 0.2
+        });
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.2), poleMat);
+        pole.position.set(side > 0 ? -houseW / 2 - 0.1 : houseW / 2 + 0.1, 1.1, 0.5);
+        group.add(pole);
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7), poleMat);
+        arm.rotation.z = Math.PI / 2;
+        const lx = side > 0 ? -houseW / 2 - 0.45 : houseW / 2 + 0.45;
+        arm.position.set(lx, 2.1, 0.5);
+        group.add(arm);
+        const lanternMat = new THREE.MeshStandardMaterial({
+          color: 0xFFD060,
+          emissive: 0xFFAA00,
+          emissiveIntensity: 0.8,
+          roughness: 0.3,
+          metalness: 0.5
+        });
+        const lnx = side > 0 ? -houseW / 2 - 0.7 : houseW / 2 + 0.7;
+        const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.18), lanternMat);
+        lantern.position.set(lnx, 2.1, 0.5);
+        group.add(lantern);
+        const ptLight = new THREE.PointLight(0xFFD060, 0.7, 6);
+        ptLight.position.set(lnx, 2.1, 0.5);
+        group.add(ptLight);
+        streetLights.push(ptLight);
+      }
+      // Lületaşı
+      if (Math.random() > 0.6) {
+        const lt = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({
+          color: 0xF5F5F0,
+          emissive: 0x888888,
+          emissiveIntensity: 0.2,
+          roughness: 0.1,
+          metalness: 0.9
+        }));
+        lt.position.set((Math.random() - 0.5) * 0.5, 0.12, houseD * 0.52);
+        group.add(lt);
+      }
+
+      // ✓ Evleri oyuncunun olmadığı yerlere koy (geri uzaklaştır)
+      // Eski güvenli mesafe: side * (4.8 + Math.random() * 0.8)
+      const safeX = side * (5.5 + Math.random() * 1.5);
+      group.position.set(safeX, 0, z);
+      group.rotation.y = side > 0 ? 0.1 : -0.1;
+      scene.add(group);
+      envObjects.push(group);
+    }
+
+    // ── ANA ENV SPAWN – seviyeye göre yönlendirme ──
+    function createEnvObject(z) {
+      const lvl = GameState.levelIndex;
+      if (lvl === 0) {
+        const r = Math.random();
+        if (r < 0.55) spawnFairyChimneyCluster(z);
+        else spawnRoadSideRocks(z);
+      } else if (lvl === 1) {
+        const r = Math.random();
+        const side = Math.random() > 0.5 ? 1 : -1;
+        if (r < 0.3) createZiggurat(side * (7 + Math.random() * 2), z, 0.6 + Math.random() * 0.5);
+        else if (r < 0.65) {
+          createPalmTree(side * (5 + Math.random() * 2.5), z, 0.8 + Math.random() * 0.4);
+          if (Math.random() > 0.4) createPalmTree(-side * (5 + Math.random() * 2), z + (Math.random() - 0.5) * 10, 0.6 + Math.random() * 0.4);
+        } else {
+          spawnCuneiformTablet(z);
+          if (Math.random() > 0.5) spawnCuneiformTablet(z + (Math.random() - 0.5) * 8);
+        }
+      } else if (lvl === 2) {
+        const r = Math.random();
+        const side = Math.random() > 0.5 ? 1 : -1;
+        if (r < 0.35) {
+          const cx = side * (5.5 + Math.random()); const h = 2.8 + Math.random() * 1.5;
+          createColumn(cx, z, h, 0.9 + Math.random() * 0.3);
+          createColumn(cx + side * 1.4, z, h * (0.8 + Math.random() * 0.3), 0.8 + Math.random() * 0.2);
+        } else if (r < 0.55) {
+          createAncientTheatre(side, z);
+        } else if (r < 0.75) {
+          for (let ci = 0; ci < 3; ci++) createLydianCoin(side * (5 + Math.random() * 2), 0.5 + Math.random() * 0.5, z + (Math.random() - 0.5) * 8);
+        } else {
+          createStoneGate(z - 5);
+        }
+      } else if (lvl === 3) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        createOdunpazariHouse(side, z);
+        if (Math.random() > 0.4) createOdunpazariHouse(-side, z + (Math.random() - 0.5) * 6);
+      }
+    }
+
+    // ESKI createEnvObject'in bıraktığı boşluğu doldur – dummy başlangıç noktası:
+    function _legacyEnvStart() {
+      const levelIdx = GameState.levelIndex;
+      if (levelIdx === 0) {
+        // Anadolu: Kayalık oluşumlar (Kapadokya peri bacaları)
+        const side = Math.random() > 0.5 ? 6 : -6;
+        const height = 1.5 + Math.random() * 2.5;
+        const rockGeo = new THREE.CylinderGeometry(0.2 + Math.random() * 0.3, 0.4 + Math.random() * 0.4, height);
+        const rockMat = new THREE.MeshLambertMaterial({ color: 0xC09060 });
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        rock.position.set(side, height / 2, 0);
+        rock.castShadow = true;
+        group.add(rock);
+        // Tepe
+        const capGeo = new THREE.ConeGeometry(0.5, 0.6);
+        const capMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
+        const cap = new THREE.Mesh(capGeo, capMat);
+        cap.position.set(side, height + 0.3, 0);
+        group.add(cap);
+      } else if (levelIdx === 1) {
+        // Mezopotamya: Hurma ağaçları, kum tepeleri
+        const side = Math.random() > 0.5 ? 5.5 : -5.5;
+        const trunkGeo = new THREE.CylinderGeometry(0.1, 0.15, 2);
+        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x7B5A2B });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.set(side, 1, 0);
+        trunk.rotation.z = (Math.random() - 0.5) * 0.3;
+        group.add(trunk);
+        for (let i = 0; i < 5; i++) {
+          const leafGeo = new THREE.BoxGeometry(0.08, 0.6, 0.12);
+          const leafMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+          const leaf = new THREE.Mesh(leafGeo, leafMat);
+          const angle = (i / 5) * Math.PI * 2;
+          leaf.position.set(side + Math.cos(angle) * 0.6, 2.2, Math.sin(angle) * 0.6);
+          leaf.rotation.set(0.4, angle, 0);
+          group.add(leaf);
+        }
+      } else if (levelIdx === 2) {
+        // Antik şehir: Sütunlar
+        const side = Math.random() > 0.5 ? 5.5 : -5.5;
+        const pillarGeo = new THREE.CylinderGeometry(0.2, 0.25, 3 + Math.random() * 2);
+        const pillarMat = new THREE.MeshLambertMaterial({ color: 0xF5F0E0 });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(side, 1.5, 0);
+        pillar.castShadow = true;
+        group.add(pillar);
+        const capGeo = new THREE.BoxGeometry(0.6, 0.2, 0.6);
+        const cap = new THREE.Mesh(capGeo, pillarMat);
+        cap.position.set(side, pillar.geometry.parameters.height / 2 + 0.1, 0);
+        // wait, let's simplify
+        const capFixed = new THREE.Mesh(capGeo, pillarMat);
+        capFixed.position.set(side, 3.2, 0);
+        group.add(capFixed);
+      } else {
+        // Eskişehir: Ahşap ev silüetleri
+        const side = Math.random() > 0.5 ? 5.5 : -5.5;
+        const houseGeo = new THREE.BoxGeometry(1.2, 1.8, 1.2);
+        const houseMat = new THREE.MeshLambertMaterial({
+          color: [0xD4722A, 0xA0522D, 0xCD853F, 0x8B4513][Math.floor(Math.random() * 4)]
+        });
+        const house = new THREE.Mesh(houseGeo, houseMat);
+        house.position.set(side, 0.9, 0);
+        house.castShadow = true;
+        group.add(house);
+        const roofGeo = new THREE.ConeGeometry(0.9, 0.8, 4);
+        const roofMat = new THREE.MeshLambertMaterial({ color: 0x8B3A3A });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.set(side, 2.2, 0);
+        roof.rotation.y = Math.PI / 4;
+        group.add(roof);
+      }
+
+      group.position.z = z;
+      scene.add(group);
+      envObjects.push(group);
+      return group;
+    }
+
+    // ============================================================
+    //  BÖLÜM 7: ENGEL SİSTEMİ
+    // ============================================================
+
+    const obstacles = [];
+
+    function spawnObstacle(z) {
+      const lane = Math.floor(Math.random() * 3);
+      const group = new THREE.Group();
+
+      const type = Math.random() > 0.5 ? 'rock' : 'hole';
+
+      if (type === 'rock') {
+        const geo = new THREE.DodecahedronGeometry(0.4 + Math.random() * 0.3);
+        const mat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+        const rock = new THREE.Mesh(geo, mat);
+        rock.position.y = 0.4;
+        rock.castShadow = true;
+        group.add(rock);
+        group.userData = { type: 'rock', lane };
+      } else {
+        const geo = new THREE.BoxGeometry(2, 0.3, 1.5);
+        const mat = new THREE.MeshLambertMaterial({ color: 0x1A0A00 });
+        const hole = new THREE.Mesh(geo, mat);
+        hole.position.y = -0.1;
+        group.add(hole);
+        group.userData = { type: 'hole', lane };
+      }
+
+      group.position.set(LANE_X[lane], 0, z);
+      scene.add(group);
+      obstacles.push(group);
+    }
+
+    // ============================================================
+    //  BÖLÜM 8: CEVAP KAPILARI
+    // ============================================================
+
+    const answerGates = [];
+    let currentQuestion = null;
+
+    function spawnAnswerGates(z, question) {
+      currentQuestion = question;
+      answerGates.forEach(g => scene.remove(g));
+      answerGates.length = 0;
+
+      const colors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D];
+
+      question.answers.forEach((ans, i) => {
+        const group = new THREE.Group();
+
+        // Kapı çerçevesi
+        const frameGeo = new THREE.BoxGeometry(1.8, 3, 0.15);
+        const frameMat = new THREE.MeshLambertMaterial({
+          color: colors[i],
+          transparent: true,
+          opacity: 0.6
+        });
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        frame.castShadow = true;
+        group.add(frame);
+
+        // Kapı üst çubuğu
+        const topGeo = new THREE.BoxGeometry(1.8, 0.2, 0.15);
+        const topMat = new THREE.MeshLambertMaterial({ color: colors[i] });
+        const top = new THREE.Mesh(topGeo, topMat);
+        top.position.y = 1.6;
+        group.add(top);
+
+        // Yan çubuklar
+        [-0.85, 0.85].forEach(x => {
+          const sideGeo = new THREE.BoxGeometry(0.15, 3, 0.15);
+          const side = new THREE.Mesh(sideGeo, topMat);
+          side.position.set(x, 0, 0);
+          group.add(side);
+        });
+
+        group.position.set(LANE_X[i], 1.5, z);
+        group.userData = { answerIndex: i, isCorrect: i === question.correct };
+        scene.add(group);
+        answerGates.push(group);
+
+        // Cevap metni - sprite (daha büyük ve net)
+        createAnswerLabel(ans, group, colors[i]);
+      });
+
+      GameState.questionGateZ = z;
+      GameState.questionActive = true;
+
+      // UI soru paneli
+      document.getElementById('qText').textContent = question.q;
+      document.getElementById('questionPanel').style.display = 'block';
+    }
+
+    function createAnswerLabel(text, parent, color) {
+      // Sprite canvas olarak metin oluştur - DAHA BÜYÜK VE NET
+      const canvas2d = document.createElement('canvas');
+      canvas2d.width = 512; canvas2d.height = 256;
+      const ctx = canvas2d.getContext('2d');
+
+      // Arka plan - parlak panel
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.roundRect(8, 8, 496, 240, 24);
+      ctx.fill();
+
+      // Kenarlık
+      ctx.strokeStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.lineWidth = 6;
+      ctx.roundRect(8, 8, 496, 240, 24);
+      ctx.stroke();
+
+      // Metin - daha büyük font
+      ctx.font = 'bold 42px Nunito, Arial, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Metin kaydırma - daha akıllı
+      const words = text.split(' ');
+      let lines = []; let current = '';
+      words.forEach(w => {
+        const test = current ? current + ' ' + w : w;
+        const metrics = ctx.measureText(test);
+        if (metrics.width > 450) {
+          if (current) lines.push(current);
+          current = w;
+        } else {
+          current = test;
+        }
+      });
+      if (current) lines.push(current);
+
+      // Metni ortala
+      const startY = 128 - (lines.length - 1) * 26;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, 256, startY + i * 52);
+      });
+
+      const texture = new THREE.CanvasTexture(canvas2d);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+
+      const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 1.0,
+        depthTest: false,
+        depthWrite: false
+      });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(2.5, 1.25, 1);
+      sprite.position.set(0, 2.2, 0);  // Kapının üstünde havada
+      sprite.renderOrder = 100;  // Her zaman önde görün
+      parent.add(sprite);
+    }
+
+    // ============================================================
+    //  BÖLÜM 9: PARTİKÜL / KONFETİ SİSTEMİ
+    // ============================================================
+
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const ctx2d = confettiCanvas.getContext('2d');
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+
+    const confettiPieces = [];
+
+    function spawnConfetti() {
+      for (let i = 0; i < 80; i++) {
+        confettiPieces.push({
+          x: Math.random() * confettiCanvas.width,
+          y: -20,
+          w: 8 + Math.random() * 8,
+          h: 4 + Math.random() * 4,
+          angle: Math.random() * Math.PI * 2,
+          vy: 2 + Math.random() * 4,
+          vx: (Math.random() - 0.5) * 3,
+          va: (Math.random() - 0.5) * 0.15,
+          color: `hsl(${Math.random() * 360},90%,60%)`,
+          life: 1
+        });
+      }
+    }
+
+    function updateConfetti() {
+      ctx2d.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      for (let i = confettiPieces.length - 1; i >= 0; i--) {
+        const p = confettiPieces[i];
+        p.x += p.vx; p.y += p.vy;
+        p.angle += p.va;
+        p.vy += 0.08;
+        p.life -= 0.008;
+        if (p.life <= 0 || p.y > confettiCanvas.height) {
+          confettiPieces.splice(i, 1); continue;
+        }
+        ctx2d.save();
+        ctx2d.globalAlpha = p.life;
+        ctx2d.translate(p.x, p.y);
+        ctx2d.rotate(p.angle);
+        ctx2d.fillStyle = p.color;
+        ctx2d.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx2d.restore();
+      }
+    }
+
+    // Three.js havai fişek partikülleri
+    const particles3D = [];
+
+    function spawn3DParticles(x, y, z) {
+      for (let i = 0; i < 30; i++) {
+        const geo = new THREE.SphereGeometry(0.08);
+        const mat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(`hsl(${Math.random() * 360}, 90%, 60%)`)
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z);
+        mesh.userData.vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.3,
+          0.1 + Math.random() * 0.25,
+          (Math.random() - 0.5) * 0.2
+        );
+        mesh.userData.life = 1;
+        scene.add(mesh);
+        particles3D.push(mesh);
+      }
+    }
+
+    function updateParticles3D() {
+      for (let i = particles3D.length - 1; i >= 0; i--) {
+        const p = particles3D[i];
+        p.userData.vel.y -= 0.01;
+        p.position.addScaledVector(p.userData.vel, 1);
+        p.userData.life -= 0.025;
+        p.material.opacity = p.userData.life;
+        p.material.transparent = true;
+        if (p.userData.life <= 0) {
+          scene.remove(p);
+          particles3D.splice(i, 1);
+        }
+      }
+    }
+
+    // ============================================================
+    //  BÖLÜM 10: SEVİYE GEÇİŞ / ARKA PLAN GÜNCELLEMESI
+    // ============================================================
+
+    // Renk geçişi için değişkenler
+    let bgTransition = { active: false, progress: 0, duration: 120, fromSky: null, toSky: null, fromFog: null, toFog: null, fromGround: null, toGround: null };
+
+    function applyLevelTheme(levelIdx) {
+      const lvl = LEVELS[levelIdx];
+      if (!lvl) return;
+
+      // CSS arka plan class'larını yönet
+      canvas.classList.remove('level-kapadokya', 'level-mezopotamya', 'level-anadolu', 'level-odunpazari');
+
+      // Kapadokya seviyesi (levelIndex === 0) için CSS arka plan resmi
+      if (levelIdx === 0) {
+        canvas.classList.add('level-kapadokya');
+        scene.background = null;
+      }
+      // Mezopotamya seviyesi (levelIndex === 1) için CSS arka plan resmi
+      else if (levelIdx === 1) {
+        canvas.classList.add('level-mezopotamya');
+        scene.background = null;
+      }
+      // Anadolu Uygarlıkları seviyesi (levelIndex === 2) için CSS arka plan resmi
+      else if (levelIdx === 2) {
+        canvas.classList.add('level-anadolu');
+        scene.background = null;
+      }
+      // Eskişehir Odunpazarı seviyesi (levelIndex === 3) için CSS arka plan resmi
+      else if (levelIdx === 3) {
+        canvas.classList.add('level-odunpazari');
+        scene.background = null;
+      }
+
+      // Tüm seviyeler CSS arka plan kullandığı için sis ve zemin rengini doğrudan ayarla
+      scene.fog.color.set(lvl.bgColors.fog);
+      tiles.forEach(tile => {
+        if (tile.material && tile.material.color) {
+          tile.material.color.set(lvl.bgColors.ground);
+        }
+      });
+
+      document.getElementById('levelDisplay').textContent = lvl.id;
+      document.getElementById('levelName').textContent = lvl.name;
+
+      // Seviye müziğini değiştir
+      playLevelMusic(levelIdx);
+
+      // ESKİ SEVİYEYİ TAMAMEN TEMİZLE
+      clearLevel();
+
+      // Yeni seviye çevresini başlat
+      initLevelEnvironment(levelIdx);
+    }
+
+    // RENK GEÇİŞİNİ GÜNCELLE (animate içinde çağrılacak)
+    function updateBackgroundTransition(dt) {
+      if (!bgTransition.active) return;
+
+      bgTransition.progress += dt;
+      const t = Math.min(bgTransition.progress / bgTransition.duration, 1);
+
+      // Lerp (Linear interpolation)
+      scene.background.lerpColors(bgTransition.fromSky, bgTransition.toSky, t);
+      scene.fog.color.lerpColors(bgTransition.fromFog, bgTransition.toFog, t);
+
+      tiles.forEach(tile => {
+        if (tile.material && tile.material.color) {
+          tile.material.color.lerpColors(bgTransition.fromGround, bgTransition.toGround, t);
+        }
+      });
+
+      if (t >= 1) {
+        bgTransition.active = false;
+      }
+    }
+
+    // KRİTİK: TÜM SEVİYE OBJELERİNİ TEMİZLE (dispose ile)
+    function clearLevel() {
+      // Tüm çevre objelerini temizle ve dispose et
+      envObjects.forEach(obj => {
+        scene.remove(obj);
+        // Geometri ve materyalleri dispose et (hafıza sızıntısı önleme)
+        obj.traverse(child => {
+          if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(mat => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+      });
+      envObjects.length = 0;
+
+      // Sıcak hava balonlarını temizle
+      hotAirBalloons.forEach(b => {
+        scene.remove(b.group);
+        b.group.traverse(child => {
+          if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          }
+        });
+      });
+      hotAirBalloons.length = 0;
+
+      // Nehri temizle
+      if (riverMesh) {
+        scene.remove(riverMesh);
+        if (riverMesh.geometry) riverMesh.geometry.dispose();
+        if (riverMesh.material) riverMesh.material.dispose();
+        riverMesh = null;
+      }
+
+      // Sokak lambalarını temizle
+      streetLights.forEach(light => {
+        if (light.parent) light.parent.remove(light);
+      });
+      streetLights.length = 0;
+
+      // Engelleri temizle
+      obstacles.forEach(o => {
+        scene.remove(o);
+        o.traverse(child => {
+          if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          }
+        });
+      });
+      obstacles.length = 0;
+
+      // Cevap kapılarını temizle
+      answerGates.forEach(g => {
+        scene.remove(g);
+        g.traverse(child => {
+          if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          }
+        });
+      });
+      answerGates.length = 0;
+    }
+
+    // Seviye özel çevreyi başlat
+    let sunMesh = null;  // Kapadokya güneşi
+
+    function initLevelEnvironment(levelIdx) {
+      // Önceki seviyenin güneşini temizle
+      if (sunMesh) {
+        scene.remove(sunMesh);
+        sunMesh = null;
+      }
+
+      if (levelIdx === 0) {
+        // Kapadokya: Sıcak hava balonları + Bulutlar + Gün doğumu sis + Güneş
+        createHotAirBalloons();
+        createClouds();
+        // Gün doğumu sis efekti
+        scene.fog = new THREE.Fog(0xFFDAB9, 40, 120);
+
+        // Gün doğumu güneşi - Büyük turuncu/kırmızı disk
+        const sunGeo = new THREE.SphereGeometry(8, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({
+          color: 0xFF6B35,  // Turuncu-kırmızı
+          transparent: true,
+          opacity: 0.9
+        });
+        sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        sunMesh.position.set(-20, 12, -80);  // Sol üst köşede ufuk çizgisi üzerinde
+        scene.add(sunMesh);
+
+        // Güneş ışığı (yumuşak turuncu)
+        const sunLight = new THREE.DirectionalLight(0xFFB74D, 0.6);
+        sunLight.position.set(-20, 15, -60);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+
+      } else if (levelIdx === 1) {
+        // Mezopotamya: Nehir
+        const side = Math.random() > 0.5 ? 1 : -1;
+        createRiver(side);
+      }
+      // Seviye 2 ve 3 (Seviye 4) için özel başlangıç objesi yok
+    }
+
+    // Kapadokya için low-poly bulutlar
+    function createClouds() {
+      const cloudPositions = [
+        { x: -15, y: 12, z: -50, scale: 1.2 },
+        { x: 12, y: 15, z: -80, scale: 0.9 },
+        { x: -8, y: 10, z: -120, scale: 1.5 },
+        { x: 18, y: 14, z: -30, scale: 1.0 }
+      ];
+
+      cloudPositions.forEach((pos, idx) => {
+        const cloudGroup = new THREE.Group();
+
+        // 3-4 beyaz küp birleşimi = bulut
+        const boxCount = 3 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < boxCount; i++) {
+          const size = 1.5 + Math.random() * 1.5;
+          const cloudGeo = new THREE.BoxGeometry(size, size * 0.6, size);
+          const cloudMat = new THREE.MeshLambertMaterial({
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 0.85
+          });
+          const cloudPart = new THREE.Mesh(cloudGeo, cloudMat);
+          cloudPart.position.set(
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 0.5,
+            (Math.random() - 0.5) * 1.5
+          );
+          cloudGroup.add(cloudPart);
+        }
+
+        cloudGroup.position.set(pos.x, pos.y, pos.z);
+        cloudGroup.scale.setScalar(pos.scale);
+        cloudGroup.userData = { type: 'cloud', originalZ: pos.z, speed: 0.02 + Math.random() * 0.02 };
+        scene.add(cloudGroup);
+        envObjects.push(cloudGroup);
+      });
+    }
+
+    // ============================================================
+    //  BÖLÜM 11: UI GÜNCELLEMELERİ
+    // ============================================================
+
+    function updateHUD() {
+      document.getElementById('scoreDisplay').textContent = GameState.score;
+      const hearts = ['h1', 'h2', 'h3'];
+      hearts.forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.classList.toggle('dead', i >= GameState.lives);
+      });
+      // Şerit göstergesi
+      [0, 1, 2].forEach(i => {
+        document.getElementById('dot' + i).classList.toggle('active', i === GameState.currentLane);
+      });
+    }
+
+    function showInfoPopup(text) {
+      const popup = document.getElementById('infoPopup');
+      document.getElementById('infoText').textContent = text;
+      popup.classList.add('show');
+      setTimeout(() => popup.classList.remove('show'), 10000);
+    }
+
+    function showSpeedAlert() {
+      const el = document.getElementById('speedAlert');
+      el.style.opacity = '1';
+      el.style.transition = 'none';
+      el.style.fontSize = '24px';
+      setTimeout(() => {
+        el.style.transition = 'all 0.8s ease-out';
+        el.style.opacity = '0';
+        el.style.fontSize = '72px';
+      }, 100);
+    }
+
+    // ============================================================
+    //  BÖLÜM 12: ÇARPIŞMA TESPİTİ
+    // ============================================================
+
+    function checkCollisions() {
+      if (GameState.hitCooldown > 0) return;
+
+      // Engel çarpışması
+      obstacles.forEach(ob => {
+        const dx = Math.abs(ob.position.x - LANE_X[GameState.currentLane]);
+        const dz = Math.abs(ob.position.z - character.position.z);
+        if (dx < 0.8 && dz < 1.2) {
+          hitByObstacle();
+          ob.position.z = -9999;
+        }
+      });
+
+      // Cevap kapısı geçişi
+      if (GameState.questionActive) {
+        answerGates.forEach(gate => {
+          const dz = character.position.z - gate.position.z;
+          // Daha geniş collision alanı (karakter kapıdan geçerken)
+          if (dz > -1.0 && dz < 2.0) {
+            // Hangi şeritte olduğunu kontrol et
+            const gateLane = Math.round((gate.position.x + 2.2) / 2.2);
+            if (gateLane === GameState.currentLane) {
+              handleAnswer(gate.userData.isCorrect, gate.userData.answerIndex);
+            }
+          }
+        });
+      }
+    }
+
+    function hitByObstacle() {
+      GameState.lives = Math.max(0, GameState.lives - 1);
+      GameState.speed = Math.max(0.08, GameState.speed * 0.7);
+      GameState.hitCooldown = 60;
+
+      // Titreme animasyonu kamerada
+      shakeCameraFlag = true;
+      shakeDuration = 20;
+
+      // Çarpma sesi oynat
+      if (audioLoaded && hitSound && hitSound.buffer && !hitSound.isPlaying) {
+        hitSound.play();
+      }
+
+      updateHUD();
+
+      if (GameState.lives <= 0) {
+        endGame();
+      }
+    }
+
+    let shakeCameraFlag = false, shakeDuration = 0;
+
+    function handleAnswer(isCorrect, gateIdx) {
+      if (!GameState.questionActive) return;
+      GameState.questionActive = false;
+      document.getElementById('questionPanel').style.display = 'none';
+
+      // Kapıları temizle
+      setTimeout(() => {
+        answerGates.forEach(g => scene.remove(g));
+        answerGates.length = 0;
+      }, 800);
+
+      // Cevaplanan soru sayısını artır
+      GameState.totalQuestionsAnswered++;
+
+      if (isCorrect) {
+        GameState.score += 10;
+        GameState.speed += 0.015;
+
+        // Doğru cevap sesi oynat
+        if (audioLoaded && correctAnswerSound && correctAnswerSound.buffer && !correctAnswerSound.isPlaying) {
+          correctAnswerSound.play();
+        }
+
+        // Eskişehir seviyesinde ekstra konfeti
+        if (GameState.levelIndex === 3) {
+          spawnConfetti();
+          spawnConfetti();
+        } else {
+          spawnConfetti();
+        }
+        spawn3DParticles(LANE_X[GameState.currentLane], 2, character.position.z - 5);
+
+        // NOT: Seviye geçişi artık soru sayısına göre yapılıyor (animate fonksiyonunda)
+      } else {
+        GameState.speed = Math.max(0.08, GameState.speed - 0.02);
+        const q = LEVELS[GameState.levelIndex].questions[GameState.questionIndex];
+        showInfoPopup(q.info);
+
+        // Yanlış cevap sesi oynat
+        if (audioLoaded && wrongAnswerSound && wrongAnswerSound.buffer && !wrongAnswerSound.isPlaying) {
+          wrongAnswerSound.play();
+        }
+      }
+
+      // Sonraki soruya geç
+      GameState.questionIndex++;
+
+      // KRİTİK: TÜM SORULAR BİTTİ Mİ KONTROL ET
+      const currentLevel = LEVELS[GameState.levelIndex];
+      if (GameState.questionIndex >= currentLevel.questions.length) {
+        // Bu seviyenin soruları bitti
+        if (GameState.levelIndex === LEVELS.length - 1) {
+          // SON SEVİYE VE TÜM SORULAR BİTTİ - OYUNU BAŞARI İLE BİTİR!
+          setTimeout(() => {
+            winGame();
+          }, 2000);
+          return;
+        } else {
+          // Bir sonraki seviyeye geç
+          GameState.levelIndex++;
+          GameState.questionIndex = 0;
+          applyLevelTheme(GameState.levelIndex);
+        }
+      }
+
+      GameState.nextQuestionDist = GameState.distanceTraveled + 80 + Math.random() * 60;
+      updateHUD();
+    }
+
+    // OYUNU BAŞARI İLE BİTİRME FONKSİYONU
+    function winGame() {
+      GameState.running = false;
+
+      // Tüm müzikleri durdur ve kazanma sesi çal
+      stopAllMusic();
+      if (audioLoaded && gameWinSound && gameWinSound.buffer && !gameWinSound.isPlaying) {
+        gameWinSound.play();
+      }
+
+      document.getElementById('hud').classList.add('hidden');
+      document.getElementById('questionPanel').style.display = 'none';
+
+      // Sertifika ekranını göster
+      const certScore = document.getElementById('certScore');
+      certScore.textContent = GameState.score;
+      document.getElementById('certCharName').textContent = GameState.charName;
+
+      // Başarı mesajı - tüm soruları tamamladı
+      let rank = '🏆 Tarih Ustası 🏆';
+      if (GameState.score >= 150) rank = '👑 Efsane Tarih Gezgini 👑';
+      else if (GameState.score >= 120) rank = '⭐ Tarih Profesörü ⭐';
+      else if (GameState.score >= 80) rank = '🎓 Tarih Uzmanı 🎓';
+      document.getElementById('certRank').textContent = rank;
+
+      document.getElementById('endScreen').classList.remove('hidden');
+
+      // Büyük kutlama!
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => spawnConfetti(), i * 300);
+      }
+    }
+
+    // ============================================================
+    //  BÖLÜM 13: KONTROL SİSTEMİ (Klavye + Dokunmatik)
+    // ============================================================
+
+    function moveLeft() {
+      if (GameState.currentLane > 0) GameState.currentLane--;
+      updateHUD();
+    }
+    function moveRight() {
+      if (GameState.currentLane < 2) GameState.currentLane++;
+      updateHUD();
+    }
+
+    // Klavye
+    document.addEventListener('keydown', e => {
+      if (!GameState.running) return;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
+    });
+
+    // Dokunmatik – Swipe
+    let touchStartX = 0, touchStartY = 0;
+    document.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+      if (!GameState.running) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) moveLeft();
+        else moveRight();
+      }
+    }, { passive: true });
+
+    // ============================================================
+    //  BÖLÜM 14: OYUN BAŞLATMA / SONLANDIRMA
+    // ============================================================
+
+    function selectChar(el) {
+      document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      GameState.selectedChar = el.dataset.char;
+      GameState.charName = GameState.selectedChar === 'girl' ? 'Elif' : 'Can';
+    }
+
+    function startGame() {
+      // Durumu sıfırla
+      GameState.running = true;
+      GameState.score = 0;
+      GameState.lives = 3;
+      GameState.currentLane = 1;
+      GameState.speed = 0.18;
+      GameState.baseSpeed = 0.18;
+      GameState.levelIndex = 0;
+      GameState.questionIndex = 0;
+      GameState.questionActive = false;
+      GameState.distanceTraveled = 0;
+      GameState.nextQuestionDist = 80;  // İlk soru 80 birim sonra
+      GameState.nextObstacleDist = 40;
+      GameState.hitCooldown = 0;
+      GameState.totalQuestionsAnswered = 0;
+
+      // Seviye 1 müziğini başlat (kullanıcı etkileşimi ile)
+      playLevelMusic(0);
+
+      // Sahneleri tamamen temizle (clearLevel kullan)
+      clearLevel();
+
+      // Karakter oluştur
+      createCharacter(GameState.selectedChar === 'girl');
+      charCurrentX = LANE_X[1];
+      charTargetX = LANE_X[1];
+
+      // Yolları oluştur
+      initTiles();
+      applyLevelTheme(0);
+
+      // Çevre objeleri başlat
+      for (let z = -30; z > -300; z -= 25) {
+        createEnvObject(z);
+      }
+
+      // Ekran geçişleri
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.add('hidden');
+      document.getElementById('hud').classList.remove('hidden');
+
+      // Mobil ipucu
+      if ('ontouchstart' in window) {
+        document.getElementById('mobileHint').style.display = 'block';
+        setTimeout(() => document.getElementById('mobileHint').style.display = 'none', 3000);
+      }
+
+      updateHUD();
+    }
+
+    function endGame() {
+      GameState.running = false;
+
+      // Tüm müzikleri durdur ve game over sesi çal
+      stopAllMusic();
+      if (audioLoaded && gameOverSound && gameOverSound.buffer && !gameOverSound.isPlaying) {
+        gameOverSound.play();
+      }
+
+      // Tüm seviye arka planlarını temizle
+      canvas.classList.remove('level-kapadokya', 'level-mezopotamya', 'level-anadolu', 'level-odunpazari');
+
+      document.getElementById('hud').classList.add('hidden');
+      document.getElementById('questionPanel').style.display = 'none';
+
+      const certScore = document.getElementById('certScore');
+      certScore.textContent = GameState.score;
+      document.getElementById('certCharName').textContent = GameState.charName;
+
+      let rank = 'Tarih Meraklısı ';
+      if (GameState.score >= 200) rank = 'Tarih Ustası ';
+      else if (GameState.score >= 100) rank = 'Tarih Gezgini ';
+      else if (GameState.score >= 50) rank = 'Tarih Öğrencisi ';
+      document.getElementById('certRank').textContent = rank;
+
+      document.getElementById('endScreen').classList.remove('hidden');
+      spawnConfetti();
+    }
+
+    function restartGame() {
+      document.getElementById('endScreen').classList.add('hidden');
+      document.getElementById('startScreen').classList.remove('hidden');
+    }
+
+    // ============================================================
+    //  BÖLÜM 15: ANA OYUN DÖNGÜSÜ (ANIMATE)
+    // ============================================================
+
+    let lastTime = 0;
+    let envSpawnZ = -300;
+    let obstacleNextZ = -40;
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min((time - lastTime) / 16.67, 3);
+      lastTime = time;
+
+      if (!GameState.running) {
+        updateConfetti();
+        renderer.render(scene, camera);
+        return;
+      }
+
+      const spd = GameState.speed * dt;
+
+      // ── YOL KAYDIRMası ──
+      tiles.forEach(tile => {
+        tile.position.z += spd;
+        if (tile.position.z > 15) {
+          tile.position.z -= TILE_COUNT * TILE_LENGTH;
+        }
+      });
+
+      // ── ÇEVRE OBJELERİ KAY ──
+      for (let i = envObjects.length - 1; i >= 0; i--) {
+        envObjects[i].position.z += spd;
+        if (envObjects[i].position.z > 20) {
+          scene.remove(envObjects[i]);
+          envObjects.splice(i, 1);
+        }
+      }
+
+      // Yeni çevre objesi spawn
+      envSpawnZ += spd;
+      if (envSpawnZ >= -280) { envSpawnZ = -300; createEnvObject(-300); }
+
+      // ── ENGEL SİSTEMİ ──
+      GameState.nextObstacleDist -= spd;
+      if (GameState.nextObstacleDist <= 0) {
+        spawnObstacle(-80);
+        GameState.nextObstacleDist = 25 + Math.random() * 20;
+      }
+      obstacles.forEach(o => {
+        o.position.z += spd;
+        o.rotation.y += 0.02;
+      });
+      // Uzak engelleri sil
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        if (obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); }
+      }
+
+      // ── CEVAP KAPILARI KAY ──
+      answerGates.forEach(g => {
+        g.position.z += spd;
+        g.children.forEach(c => {
+          if (c.isMesh) {
+            c.material.opacity = 0.5 + Math.sin(time * 0.003) * 0.2;
+          }
+        });
+        // Sprite'ların her zaman kameraya bakmasını sağla (billboard)
+        g.children.forEach(c => {
+          if (c.isSprite) {
+            c.lookAt(camera.position);
+          }
+        });
+      });
+
+      // ── SEVİYE ÖZEL ANİMASYONLAR ──
+      if (GameState.levelIndex === 0) {
+        updateHotAirBalloons(time);
+      } else if (GameState.levelIndex === 1) {
+        updateRiver(dt);
+      } else if (GameState.levelIndex === 2) {
+        updateLydianCoins();
+      }
+
+      // ── SORU SPAWN ── (Kapıları 60 birim ileride göster)
+      GameState.distanceTraveled += spd * 0.5;
+      if (!GameState.questionActive && GameState.distanceTraveled >= GameState.nextQuestionDist) {
+        const lvl = LEVELS[GameState.levelIndex];
+        // Seviyenin soruları bittiyse yeni seviyeye geç
+        if (GameState.questionIndex >= lvl.questions.length) {
+          if (GameState.levelIndex < LEVELS.length - 1) {
+            GameState.levelIndex++;
+            GameState.questionIndex = 0;
+            applyLevelTheme(GameState.levelIndex);
+            initTiles();
+          } else {
+            // Tüm sorular bitti - oyunu bitir
+            setTimeout(() => winGame(), 1000);
+          }
+        } else {
+          const q = lvl.questions[GameState.questionIndex];
+          // Karakterin pozisyonuna göre 60 birim ileride spawn et
+          const spawnZ = character ? character.position.z - 60 : -60;
+          spawnAnswerGates(spawnZ, q);
+        }
+      }
+
+      // ── KARAKTER HAREKETI ──
+      charTargetX = LANE_X[GameState.currentLane];
+      charCurrentX += (charTargetX - charCurrentX) * 0.12 * dt;
+
+      charBobTime += spd * 2.5;
+      charRunAnim += spd * 5;
+
+      if (character) {
+        character.position.x = charCurrentX;
+
+        // Koşu animasyonu (bacak sallanması)
+        const leftLeg = character.getObjectByName('leftLeg');
+        const rightLeg = character.getObjectByName('rightLeg');
+        const leftArm = character.getObjectByName('leftArm');
+        const rightArm = character.getObjectByName('rightArm');
+
+        if (leftLeg) leftLeg.rotation.x = Math.sin(charRunAnim) * 0.5;
+        if (rightLeg) rightLeg.rotation.x = -Math.sin(charRunAnim) * 0.5;
+        if (leftArm) leftArm.rotation.x = -Math.sin(charRunAnim) * 0.4;
+        if (rightArm) rightArm.rotation.x = Math.sin(charRunAnim) * 0.4;
+
+        // Zıplama (bob)
+        character.position.y = Math.abs(Math.sin(charBobTime)) * 0.15;
+      }
+
+      // ── ÇARPIŞMA TESPİTİ ──
+      checkCollisions();
+      if (GameState.hitCooldown > 0) {
+        GameState.hitCooldown -= dt;
+        if (character) character.visible = Math.floor(GameState.hitCooldown / 3) % 2 === 0;
+      } else {
+        if (character) character.visible = true;
+      }
+
+      // ── 100 PUAN HIZ ARTIŞI ──
+      const targetSpeed = GameState.baseSpeed + Math.floor(GameState.score / 100) * 0.03;
+      if (targetSpeed > GameState.speed && GameState.hitCooldown <= 0) {
+        GameState.speed = targetSpeed;
+        showSpeedAlert();
+      }
+
+      // ── SEVİYE GEÇİŞ ── (Artık soru sayısına göre - handleAnswer içinde yapılıyor)
+      // Bu blok kaldırıldı - seviye geçişleri 4 soru tamamlanınca otomatik oluyor
+
+      // ── KAMERA SARSINTI ──
+      if (shakeCameraFlag) {
+        shakeDuration -= dt;
+        camera.position.x = (Math.random() - 0.5) * 0.15;
+        camera.position.y = 3.5 + (Math.random() - 0.5) * 0.15;
+        if (shakeDuration <= 0) {
+          shakeCameraFlag = false;
+          camera.position.x = 0;
+          camera.position.y = 3.5;
+        }
+      }
+
+      // ── ARKA PLAN GEÇİŞİ (LERP) ──
+      updateBackgroundTransition(dt);
+
+      // ── PARTİKÜLLER ──
+      updateParticles3D();
+      updateConfetti();
+
+      // HUD güncelle
+      updateHUD();
+
+      renderer.render(scene, camera);
+    }
+
+    // ============================================================
+    //  BÖLÜM 16: PENCERE BOYUTU YENİDEN AYARLAMA
+    // ============================================================
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    });
+
+    // ============================================================
+    //  BÖLÜM 17: BAŞLANGIÇ SAHNESİ ARKA PLANI
+    // ============================================================
+
+    // Başlangıç ekranı için 3D arka plan dönüyor ama oyun başlamadan
+    scene.background = new THREE.Color(0x87CEEB);
+    scene.fog = new THREE.FogExp2(0xD4A472, 0.025);
+    initTiles();
+    applyLevelTheme(0);
+
+    // Başlangıç animasyonu
+    (function previewLoop(t) {
+      requestAnimationFrame(previewLoop);
+      if (!GameState.running) {
+        tiles.forEach(tile => {
+          tile.position.z += 0.05;
+          if (tile.position.z > 15) tile.position.z -= TILE_COUNT * TILE_LENGTH;
+        });
+        updateConfetti();
+        renderer.render(scene, camera);
+      }
+    })();
+
+    // Ana döngü başlat
+    requestAnimationFrame(animate);
+
+  </script>
+</body>
+
+</html>
