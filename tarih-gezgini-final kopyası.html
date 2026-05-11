@@ -1000,8 +1000,20 @@
     // Ses dosyalarını yükle
     loadAudioFiles();
 
+    // Audio Context'i unlock et (mobil için)
+    function unlockAudioContext() {
+      if (listener.context.state === 'suspended') {
+        listener.context.resume().then(() => {
+          console.log('Audio context unlocked');
+        });
+      }
+    }
+
     // Müzik kontrol fonksiyonları
     function playLevelMusic(levelIndex) {
+      // Audio context'i unlock et
+      unlockAudioContext();
+
       // Önce tüm müzikleri durdur
       stopAllMusic();
 
@@ -2498,6 +2510,7 @@
       shakeDuration = 20;
 
       // Çarpma sesi oynat
+      unlockAudioContext();
       if (audioLoaded && hitSound && hitSound.buffer && !hitSound.isPlaying) {
         hitSound.play();
       }
@@ -2530,6 +2543,7 @@
         GameState.speed += 0.015;
 
         // Doğru cevap sesi oynat
+        unlockAudioContext();
         if (audioLoaded && correctAnswerSound && correctAnswerSound.buffer && !correctAnswerSound.isPlaying) {
           correctAnswerSound.play();
         }
@@ -2550,6 +2564,7 @@
         showInfoPopup(q.info);
 
         // Yanlış cevap sesi oynat
+        unlockAudioContext();
         if (audioLoaded && wrongAnswerSound && wrongAnswerSound.buffer && !wrongAnswerSound.isPlaying) {
           wrongAnswerSound.play();
         }
@@ -2586,6 +2601,7 @@
 
       // Tüm müzikleri durdur ve kazanma sesi çal
       stopAllMusic();
+      unlockAudioContext();
       if (audioLoaded && gameWinSound && gameWinSound.buffer && !gameWinSound.isPlaying) {
         gameWinSound.play();
       }
@@ -2717,6 +2733,7 @@
 
       // Tüm müzikleri durdur ve game over sesi çal
       stopAllMusic();
+      unlockAudioContext();
       if (audioLoaded && gameOverSound && gameOverSound.buffer && !gameOverSound.isPlaying) {
         gameOverSound.play();
       }
