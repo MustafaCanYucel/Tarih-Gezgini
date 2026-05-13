@@ -329,6 +329,12 @@
 
     .hud-center {
       text-align: center;
+      transition: opacity 0.5s ease;
+    }
+
+    .hud-center.hidden {
+      opacity: 0;
+      visibility: hidden;
     }
 
     .level-badge {
@@ -2362,12 +2368,13 @@
 
       document.getElementById('levelDisplay').textContent = lvl.id;
       const levelBadge = document.getElementById('levelName');
+      const hudCenter = document.querySelector('.hud-center');
       levelBadge.textContent = lvl.name;
-      levelBadge.classList.remove('hidden');
+      hudCenter.classList.remove('hidden');
 
-      // 3 saniye sonra seviye yazısını gizle
+      // 3 saniye sonra tüm seviye kutusunu gizle
       setTimeout(() => {
-        levelBadge.classList.add('hidden');
+        hudCenter.classList.add('hidden');
       }, 3000);
 
       // Seviye müziğini değiştir
