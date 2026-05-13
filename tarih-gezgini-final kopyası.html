@@ -461,11 +461,11 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      width: min(90vw, 600px);
+      width: min(95vw, 800px);
       background: linear-gradient(135deg, #1a0533, #0D1A1A);
       border: 2px solid var(--orange);
       border-radius: 20px;
-      padding: 15px 20px;
+      padding: 15px 30px;
       z-index: 70;
       text-align: center;
       opacity: 0;
@@ -477,8 +477,8 @@
     @media (max-width: 768px) {
       #infoPopup {
         bottom: 10px;
-        width: 95vw;
-        padding: 12px 16px;
+        width: 98vw;
+        padding: 12px 20px;
       }
     }
 
@@ -486,7 +486,8 @@
     @media (orientation: landscape) and (max-height: 600px) {
       #infoPopup {
         bottom: 50px;
-        padding: 10px 16px;
+        padding: 10px 25px;
+        width: min(98vw, 900px);
       }
 
       .info-title {
