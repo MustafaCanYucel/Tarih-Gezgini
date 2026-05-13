@@ -461,13 +461,15 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      width: min(95vw, 800px);
-      background: linear-gradient(135deg, #1a0533, #0D1A1A);
-      border: 2px solid var(--orange);
+      width: min(90vw, 600px);
+      background: rgba(13, 13, 26, 0.95);
+      backdrop-filter: blur(16px);
+      border: 2px solid var(--gold);
       border-radius: 20px;
-      padding: 15px 30px;
+      padding: 15px 20px;
       z-index: 70;
       text-align: center;
+      box-shadow: 0 0 48px rgba(255, 215, 0, 0.25);
       opacity: 0;
       transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       pointer-events: none;
@@ -477,8 +479,8 @@
     @media (max-width: 768px) {
       #infoPopup {
         bottom: 10px;
-        width: 98vw;
-        padding: 12px 20px;
+        width: 95vw;
+        padding: 12px 16px;
       }
     }
 
@@ -486,17 +488,12 @@
     @media (orientation: landscape) and (max-height: 600px) {
       #infoPopup {
         bottom: 50px;
-        padding: 10px 25px;
-        width: min(98vw, 900px);
-      }
-
-      .info-title {
-        font-size: 11px;
-        margin-bottom: 6px;
+        padding: 10px 16px;
       }
 
       .info-text {
-        font-size: clamp(11px, 2vw, 14px);
+        font-size: clamp(13px, 2.5vw, 18px);
+        line-height: 1.4;
       }
     }
 
@@ -515,9 +512,10 @@
     }
 
     .info-text {
-      font-size: clamp(12px, 2.5vw, 15px);
-      color: #ddd;
-      line-height: 1.5;
+      font-family: var(--font-display);
+      font-size: clamp(13px, 2.5vw, 18px);
+      color: #fff;
+      line-height: 1.4;
     }
 
     /* ===== KONFETİ CANVAS ===== */
@@ -756,7 +754,6 @@
 
   <!-- BİLGİ NOTU -->
   <div id="infoPopup">
-    <div class="info-title">📚 Bilgi Notu</div>
     <div class="info-text" id="infoText"></div>
   </div>
 
